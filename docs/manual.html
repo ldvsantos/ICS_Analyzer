@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ICS Analyzer | Manual</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="brand">
+        <div>
+          <h1>Manual do ICS Analyzer</h1>
+          <p>Guia rápido de uso do sistema com exportação em PDF</p>
+        </div>
+      </div>
+      <nav>
+        <a href="index.html">Início</a>
+        <a class="active" href="manual.html">Manual</a>
+        <a href="sistema.html">Executar Sistema</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <div>
+        <h2>Manual completo de uso</h2>
+        <p>Este manual ensina como operar o aparato bípode–treliça no campo e como usar o sistema para gerar o relatório em PDF.</p>
+        <div class="button-group">
+          <a class="btn" href="sistema.html">Abrir o Sistema</a>
+        </div>
+      </div>
+      <div>
+        <h3 class="section-title" style="border-bottom: 0; margin-top: 0;">Visão rápida</h3>
+        <ul class="list">
+          <li>Monte e nivele o aparato na unidade amostral.</li>
+          <li>Registre as leituras de cobertura no campo.</li>
+          <li>Insira os dados no sistema e gere o PDF.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section style="margin-top: 28px;">
+      <h2 class="section-title">1) Operação do aparato no campo</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Montagem e nivelamento</h3>
+          <p>Posicione os dois bípodes, conecte a treliça e ajuste o nivelamento até alinhar o conjunto ao plano do solo.</p>
+        </div>
+        <div class="card">
+          <h3>Posicionamento do retículo</h3>
+          <p>Use o retículo na posição de leitura e mantenha o observador perpendicular ao equipamento para reduzir viés.</p>
+        </div>
+        <div class="card">
+          <h3>Sequência de leituras</h3>
+          <p>Realize as leituras de L1 a Ln na sequência da treliça, registrando classe ou percentual observado.</p>
+        </div>
+      </div>
+    </section>
+
+    <section style="margin-top: 28px;">
+      <h2 class="section-title">2) Registro das leituras</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Valores aceitos</h3>
+          <p>Registre valores entre 0.00 e 1.00, seguindo as classes visuais do protocolo.</p>
+        </div>
+        <div class="card">
+          <h3>Tamanho da amostra</h3>
+          <p>Selecione 8, 16, 24 ou 32 leituras. O padrão recomendado é 16 leituras.</p>
+        </div>
+        <div class="card">
+          <h3>Consistência</h3>
+          <p>Mantenha o mesmo operador e o mesmo ponto de observação para reduzir variações.</p>
+        </div>
+      </div>
+    </section>
+
+    <section style="margin-top: 28px;">
+      <h2 class="section-title">3) Uso do sistema</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Dados do projeto</h3>
+          <p>Preencha nome do projeto, local, data, hora, operador e unidade amostral.</p>
+        </div>
+        <div class="card">
+          <h3>Condições ambientais</h3>
+          <p>Registre as condições do céu/iluminação, presença de sombra, vento, precipitação no momento, precipitação recente, umidade superficial e observações relevantes.</p>
+        </div>
+        <div class="card">
+          <h3>Calcular e validar</h3>
+          <p>Clique em “Calcular” e verifique média, CV% e classificação antes do PDF.</p>
+        </div>
+      </div>
+    </section>
+
+    <section style="margin-top: 28px;">
+      <h2 class="section-title">3.1) Como preencher as condições ambientais</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Céu/iluminação e sombra</h3>
+          <p>Marque o estado do céu (limpo/parcial/nublado/encoberto) e se há sombra na área/retículo. Isso ajuda a contextualizar a visibilidade e a repetibilidade das leituras.</p>
+        </div>
+        <div class="card">
+          <h3>Vento e precipitação</h3>
+          <p>Registre vento e se está chovendo/chuviscando no momento. Se houve precipitação recente, informe o intervalo (ex.: &lt;24h, 1–3 dias).</p>
+        </div>
+        <div class="card">
+          <h3>Umidade superficial</h3>
+          <p>Classifique a superfície (solo/resíduo) como seco, úmido, molhado ou encharcado. Use o campo de observações para registrar particularidades (ex.: orvalho, solo muito pegajoso, resíduos saturados).</p>
+        </div>
+      </div>
+    </section>
+
+    <section style="margin-top: 28px;">
+      <h2 class="section-title">4) Exportação do PDF</h2>
+      <div class="card">
+        <p>O PDF inclui dados do projeto, condições ambientais, estatísticas e tabela completa de leituras. O arquivo é salvo automaticamente no computador com o nome:</p>
+        <p style="margin-top: 8px; font-weight: 600;">ICS_&lt;Projeto&gt;_AAAA-MM-DD.pdf</p>
+        <p style="margin-top: 8px;">A exportação só é liberada após o cálculo.</p>
+      </div>
+    </section>
+
+    <section style="margin-top: 28px;">
+      <h2 class="section-title">Referências (embasamento de campo)</h2>
+      <div class="card">
+        <p>Os campos ambientais seguem a prática comum de registrar metadados de observação em métodos de monitoramento por interceptação/pontos e protocolos de campo (ex.: condição do céu, vento, precipitação e observações do sítio), para garantir rastreabilidade e comparabilidade das campanhas.</p>
+        <p style="margin-top: 10px; font-weight: 600;">Links úteis:</p>
+        <ul class="list" style="margin-top: 8px;">
+          <li>Landscape Toolbox – Monitoring Manual (página com manuais e fichas de campo): https://www.landscapetoolbox.org/methods-manuals/monitoring-manual-2nd-edition/</li>
+          <li>Landscape Toolbox – Line-Point Intercept (visão geral do método e referências): https://www.landscapetoolbox.org/methods/line-point-intercept/</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      © <span id="current-year"></span> ICS Analyzer. Manual do sistema.
+    </div>
+  </footer>
+
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

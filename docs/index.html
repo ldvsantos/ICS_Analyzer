@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ICS Analyzer | Página Inicial</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="brand">
+        <div>
+          <h1>ICS Analyzer</h1>
+          <p>Sistema de análise do Índice de Cobertura do Solo</p>
+        </div>
+      </div>
+      <nav>
+        <a class="active" href="index.html">Início</a>
+        <a href="manual.html">Manual</a>
+        <a href="sistema.html">Executar Sistema</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <div>
+        <h2>Sistema de análise com PDF automático</h2>
+        <p>Registre as leituras, execute os cálculos e gere um relatório em PDF pronto para o usuário.</p>
+        <div class="button-group">
+          <a class="btn" href="sistema.html">Executar o Sistema</a>
+          <a class="btn secondary" href="manual.html">Abrir Manual</a>
+        </div>
+      </div>
+      <div>
+        <h3 class="section-title" style="border-bottom: 0; margin-top: 0;">Manual rápido</h3>
+        <ul class="list">
+          <li>Preencha os dados do projeto e da coleta.</li>
+          <li>Insira as leituras entre 0.00 e 1.00.</li>
+          <li>Clique em “Calcular” e depois em “Exportar PDF”.</li>
+        </ul>
+        <p class="notice" style="margin-top: 12px;">O PDF só é liberado após o cálculo.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      © <span id="current-year"></span> ICS Analyzer. Todos os direitos reservados.
+    </div>
+  </footer>
+
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
