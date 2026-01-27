@@ -1589,15 +1589,30 @@ window.addEventListener('load', () => {
   setupLeituras();
   setupCampoCalibracao();
 
+  const setDateInput = (el, dateObj) => {
+    if (!el || !(dateObj instanceof Date) || Number.isNaN(dateObj.getTime())) return;
+    // Alguns navegadores não suportam valueAsDate; use fallback com YYYY-MM-DD.
+    try {
+      if ('valueAsDate' in el) {
+        el.valueAsDate = dateObj;
+        if (el.value) return;
+      }
+    } catch {
+      // ignore
+    }
+    const yyyyMmDd = dateObj.toISOString().slice(0, 10);
+    el.value = yyyyMmDd;
+  };
+
   const dataEl = document.getElementById('data');
-  if (dataEl) dataEl.valueAsDate = new Date();
+  setDateInput(dataEl, new Date());
 
   const climaFimEl = document.getElementById('climaFim');
-  if (climaFimEl) climaFimEl.valueAsDate = new Date();
+  setDateInput(climaFimEl, new Date());
   const climaInicioEl = document.getElementById('climaInicio');
   if (climaInicioEl) {
     const d0 = new Date();
     d0.setDate(d0.getDate() - 30);
-    climaInicioEl.valueAsDate = d0;
+    setDateInput(climaInicioEl, d0);
   }
 });
