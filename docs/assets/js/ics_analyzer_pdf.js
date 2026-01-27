@@ -326,7 +326,7 @@ function desenharAreaChartICS(doc, x, y, w, h, valores, theme) {
   // Títulos Eixos
   doc.setFontSize(8);
   doc.setTextColor(50);
-  doc.text('ICS (%)', plotX - 8, plotY + plotH / 2, { angle: 90, align: 'center' });
+  doc.text('Indice de Cobertura do Solo ICS (%)', plotX - 8, plotY + plotH / 2, { angle: 90, align: 'center' });
   doc.text('Pontos de Leitura (L)', plotX + plotW / 2, plotY + plotH + 9, { align: 'center' });
 }
 
