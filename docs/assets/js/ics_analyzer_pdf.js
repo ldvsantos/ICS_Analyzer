@@ -332,6 +332,8 @@ function calcular() {
 
   const num = parseInt(numEl.value, 10);
   const leituras = [];
+  const leiturasH = []; // Array para guardar valores horizontais
+  const leiturasV = []; // Array para guardar valores verticais
 
   for (let i = 1; i <= num; i++) {
     const inputH = document.getElementById(`leitura${i}H`);
@@ -352,8 +354,12 @@ function calcular() {
       mostrarMensagem(`Erro: Valores inválidos em L${i}.`, 'error');
       return;
     }
-    const val = (valH + valV) / 2;
+      // Combinação metrológica H×V: aproxima fração de área coberta no campo visual
+      // a partir das frações ortogonais observadas no retículo.
+      const val = valH * valV;
     leituras.push(val);
+    leiturasH.push(valH);
+    leiturasV.push(valV);
   }
 
   // Equação da patente / norma: ICS̄ = (Σ ICSᵢ) / n
@@ -418,7 +424,7 @@ function calcular() {
   // Bloco "Como foi calculado" (mantém compatibilidade com versões antigas)
   const calcTextEl = document.getElementById('calc-text');
   const calcText2El = document.getElementById('calc-text2');
-  if (calcTextEl) calcTextEl.textContent = `Σ(ICSᵢ)/n = ${soma.toFixed(3)}/${num} = ${media.toFixed(3)}`;
+    if (calcTextEl) calcTextEl.textContent = `ICSᵢ = Hᵢ×Vᵢ; Σ(ICSᵢ)/n = ${soma.toFixed(3)}/${num} = ${media.toFixed(3)}`;
   if (calcText2El) calcText2El.textContent = `100 × ICS̄ = 100 × ${media.toFixed(3)} = ${percentual.toFixed(1)}%`;
 
   const calcSomaEl = document.getElementById('calc-soma');
@@ -451,10 +457,16 @@ function calcular() {
     else if (val < 0.9) classeLeitura = '0.80';
     else classeLeitura = '1.00';
 
+    const valH = leiturasH[idx];
+    const valV = leiturasV[idx];
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>L${idx + 1}</td>
-      <td>${val.toFixed(2)}</td>
+      <td>
+        <span style="font-size:0.85em; color:#666;">H: ${valH.toFixed(2)} | V: ${valV.toFixed(2)}</span><br>
+        <strong>Média: ${val.toFixed(2)}</strong>
+      </td>
       <td>${(val * 100).toFixed(1)}%</td>
       <td>${classeLeitura}</td>
     `;
@@ -502,6 +514,8 @@ function calcular() {
     areaCobertaMedia,
     areaCobertaTotal,
     leituras,
+    leiturasH,
+    leiturasV,
     media,
     percentual,
     desvio,
@@ -675,10 +689,47 @@ function exportarPDF() {
   doc.setDrawColor(180);
   doc.rect(imgX, yBox1, colImgW, box1Height);
   
-  // Texto placeholder da imagem
-  doc.setFontSize(8);
-  doc.setTextColor(150);
-  doc.text('Local para Croqui/Foto', imgX + colImgW/2, yBox1 + box1Height/2, { align: 'center' });
+  // Lógica para inserir Croqui/Foto se existir
+  if (window.imagemCroquiBase64) {
+    try {
+      const imgProps = doc.getImageProperties(window.imagemCroquiBase64);
+      // Espaço disponível (com uma pequena margem de 1mm)
+      const maxW = colImgW - 2; 
+      const maxH = box1Height - 2;
+      
+      let w = imgProps.width;
+      let h = imgProps.height;
+      const ratio = h / w;
+      
+      // Tentar ajustar primeiro pela largura
+      let finalW = maxW;
+      let finalH = finalW * ratio;
+      
+      // Se a altura estourar, ajustar pela altura
+      if (finalH > maxH) {
+        finalH = maxH;
+        finalW = finalH / ratio;
+      }
+      
+      // Centralizar a imagem no box
+      const posX = imgX + (colImgW - finalW) / 2;
+      const posY = yBox1 + (box1Height - finalH) / 2;
+      
+      doc.addImage(window.imagemCroquiBase64, 'JPEG', posX, posY, finalW, finalH);
+      
+    } catch(err){
+      console.warn('Erro ao inserir croqui no box:', err);
+      doc.setFontSize(8);
+      doc.setTextColor(200, 0, 0);
+      doc.text('Erro Img', imgX + colImgW/2, yBox1 + box1Height/2, { align: 'center' });
+    }
+  } else {
+    // Texto placeholder se não houver imagem
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text('Local para Croqui/Foto', imgX + colImgW/2, yBox1 + box1Height/2, { align: 'center' });
+  }
+  
   doc.setTextColor(0);
 
   // -- Coluna Direita: Campos de Texto
@@ -874,7 +925,7 @@ function exportarPDF() {
   y += 5;
 
   // Tabela centralizada
-  const tableW = 140;
+  const tableW = 160; // Aumentado largura
   const tableX = (pageW - tableW) / 2;
   const rowTabH = 6;
 
@@ -884,10 +935,12 @@ function exportarPDF() {
   doc.rect(tableX, y, tableW, rowTabH); // Borda
   
   doc.setFontSize(8);
-  doc.text('#', tableX + 5, y + 4);
-  doc.text('Valor', tableX + 25, y + 4);
-  doc.text('Classe Utilizada', tableX + 60, y + 4);
-  doc.text('Descrição', tableX + 100, y + 4);
+  doc.text('#', tableX + 3, y + 4);
+  doc.text('Horiz.', tableX + 12, y + 4);
+  doc.text('Vert.', tableX + 32, y + 4);
+  doc.text('Média ICS', tableX + 52, y + 4);
+  doc.text('Classe', tableX + 85, y + 4);
+  doc.text('Descrição', tableX + 115, y + 4);
 
   y += rowTabH;
 
@@ -902,6 +955,9 @@ function exportarPDF() {
 
     doc.rect(tableX, y, tableW, rowTabH); // Borda linha
 
+    const valH = d.leiturasH ? d.leiturasH[i] : '-';
+    const valV = d.leiturasV ? d.leiturasV[i] : '-';
+
     let classeLeitura, descLeitura;
     if (val < 0.1) { classeLeitura='0.0'; descLeitura='Solo Exposto'; }
     else if (val < 0.3) { classeLeitura='0.2'; descLeitura='Baixa'; }
@@ -910,70 +966,17 @@ function exportarPDF() {
     else if (val < 0.9) { classeLeitura='0.8'; descLeitura='Alta'; }
     else { classeLeitura='1.0'; descLeitura='Total'; }
 
-    doc.text(String(i + 1), tableX + 5, y + 4);
-    doc.text(val.toFixed(2), tableX + 25, y + 4);
-    doc.text(classeLeitura, tableX + 60, y + 4);
-    doc.text(descLeitura, tableX + 100, y + 4);
+    doc.text(String(i + 1), tableX + 3, y + 4);
+    doc.text(typeof valH === 'number' ? valH.toFixed(2) : valH, tableX + 12, y + 4);
+    doc.text(typeof valV === 'number' ? valV.toFixed(2) : valV, tableX + 32, y + 4);
+    doc.setFont(undefined, 'bold');
+    doc.text(val.toFixed(2), tableX + 52, y + 4);
+    doc.setFont(undefined, 'normal');
+    doc.text(classeLeitura, tableX + 85, y + 4);
+    doc.text(descLeitura, tableX + 115, y + 4);
 
     y += rowTabH;
   });
-  
-  // ==========================================
-  // CROQUI / FOTO DA ÁREA (NOVA SEÇÃO)
-  // ==========================================
-  if (window.imagemCroquiBase64) {
-    if (y > 230) { // Se não couber na página atual
-      doc.addPage();
-      y = 20;
-    } else {
-      y += 10;
-    }
-    
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'bold');
-    doc.text('REGISTRO FOTOGRÁFICO / CROQUI:', mLeft, y);
-    y += 5;
-    
-    try {
-      // Adiciona imagem preservando aspect ratio, max width 100mm, max height 80mm
-      const imgProps = doc.getImageProperties(window.imagemCroquiBase64);
-      const maxW = 160;
-      const maxH = 90;
-      let w = imgProps.width;
-      let h = imgProps.height;
-      const ratio = h / w;
-      
-      // Ajusta largura se passar do maxW
-      const pdfW = maxW;
-      const pdfH = pdfW * ratio;
-      
-      let finalW = pdfW;
-      let finalH = pdfH;
-      
-      if (finalH > maxH) {
-         finalH = maxH;
-         finalW = finalH / ratio;
-      }
-
-      // Verifica quebra de página se a imagem não couber no restante
-      if (y + finalH > 280) {
-        doc.addPage();
-        y = 20;
-        doc.text('REGISTRO FOTOGRÁFICO / CROQUI (Cont.):', mLeft, y);
-        y += 5;
-      }
-      
-      doc.addImage(window.imagemCroquiBase64, 'JPEG', mLeft, y, finalW, finalH);
-      y += finalH + 5;
-    } catch(err) {
-      console.warn('Erro ao inserir croqui:', err);
-      doc.setFontSize(9);
-      doc.setTextColor(200, 0, 0);
-      doc.text('[Erro ao inserir imagem do croqui]', mLeft, y + 5);
-      doc.setTextColor(0);
-      y += 10;
-    }
-  }
 
   // ==========================================
   // TEXTO LATERAL DIREITO (Marca d'água vertical)
