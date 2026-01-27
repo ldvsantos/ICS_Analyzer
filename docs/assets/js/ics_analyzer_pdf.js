@@ -223,72 +223,109 @@ function desenharBoxplotICS(doc, x, y, w, h, valores, theme) {
   doc.setTextColor(0);
 }
 
-function desenharBarrasFrequenciaICS(doc, x, y, w, h, valores, theme) {
-  const { panelHex = '#EAEAEA', barAHex = '#DECBE4', barBHex = '#CCEBC5', hatchHex = '#383838' } = theme || {};
+function desenharAreaChartICS(doc, x, y, w, h, valores, theme) {
+  const { panelHex = '#FFFFFF', lineHex = '#1a5f7a', fillHex = '#a8dadc' } = theme || {};
   const panel = hexToRgb(panelHex);
-  const barA = hexToRgb(barAHex);
-  const barB = hexToRgb(barBHex);
-  const hatch = hexToRgb(hatchHex);
+  const line = hexToRgb(lineHex);
+  const fill = hexToRgb(fillHex);
 
-  // Ajustado para escala 0.0, 0.2, 0.4, 0.6, 0.8, 1.0
-  const bins = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
-  const labels = ['0.0', '0.2', '0.4', '0.6', '0.8', '1.0'];
-  const counts = new Array(bins.length).fill(0);
-  (valores || []).forEach((v) => {
-    // Tolerância para float
-    const idx = bins.findIndex((b) => Math.abs(v - b) < 1e-5);
-    if (idx >= 0) counts[idx] += 1;
-  });
-  const maxCount = Math.max(1, ...counts);
-
+  // Fundo
   doc.setFillColor(panel.r, panel.g, panel.b);
   doc.setDrawColor(200);
   doc.setLineWidth(0.2);
   doc.rect(x, y, w, h, 'FD');
 
-  // Ajustado o padding inferior para caber labels e titulo
-  const padTop = 6;
-  const padBottom = 16; 
-  const padX = 7;
-  
-  const plotX = x + padX;
+  const padLeft = 10;
+  const padRight = 5;
+  const padTop = 5;
+  const padBottom = 10;
+
+  const plotX = x + padLeft;
   const plotY = y + padTop;
-  const plotW = w - padX * 2;
+  const plotW = w - (padLeft + padRight);
   const plotH = h - (padTop + padBottom);
 
-  doc.setDrawColor(120);
-  doc.setLineWidth(0.2);
-  doc.line(plotX, plotY + plotH, plotX + plotW, plotY + plotH);
+  // Escalas Eixos
+  // X: 1 até n (valores.length)
+  const n = valores.length;
+  // Y: 0.0 a 1.0 (fixo)
 
-  const barGap = 2.2;
-  const barW = (plotW - barGap * (labels.length - 1)) / labels.length;
+  const getX = (i) => plotX + (i / (n - 1)) * plotW;
+  const getY = (v) => plotY + (1 - clamp01(v)) * plotH;
 
-  doc.setFontSize(8); // Fonte um pouco maior
-  doc.setTextColor(60);
-  
-  labels.forEach((lab, i) => {
-    const bx = plotX + i * (barW + barGap);
-    const bh = (counts[i] / maxCount) * (plotH); 
-    const by = plotY + plotH - bh;
-    const fill = i % 2 === 0 ? barA : barB;
-    
-    // Desenha barra sólida (sem hachura "zebra")
-    doc.setFillColor(fill.r, fill.g, fill.b);
-    doc.rect(bx, by, barW, bh, 'F');
-    
-    doc.setDrawColor(60);
-    doc.setLineWidth(0.2);
-    doc.rect(bx, by, barW, bh);
-    
-    // Texto X (Porcentagem) - Ajustado posição Y
-    doc.text(lab, bx + barW / 2, plotY + plotH + 5, { align: 'center' });
+  // Desenhar Eixos e Grid Y
+  doc.setDrawColor(220);
+  doc.setLineWidth(0.1);
+  const ticksY = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
+  doc.setFontSize(7);
+  doc.setTextColor(100);
+
+  ticksY.forEach(t => {
+    const yy = getY(t);
+    doc.line(plotX, yy, plotX + plotW, yy);
+    doc.text(t.toFixed(1), plotX - 2, yy + 1, { align: 'right' });
   });
 
-  doc.setFontSize(9);
-  doc.setTextColor(40);
-  // Titulo bem abaixo
-  doc.text('Classes de Cobertura (%)', x + w / 2, y + h - 5, { align: 'center' });
-  doc.setTextColor(0);
+  // Grid X (opcional, só ticks)
+  for (let i = 0; i < n; i++) {
+    const xx = getX(i);
+    // apenas ticks nas bordas ou em todos? Todos
+    doc.line(xx, plotY + plotH, xx, plotY + plotH + 1);
+    // Labels X (ex: 1, 5, 10...)
+    if (n <= 16 || i % 2 === 0) { // Se muitos pontos, pula labels
+      doc.text(String(i + 1), xx, plotY + plotH + 4, { align: 'center' });
+    }
+  }
+
+  // Desenhar Área (Polígono)
+  // Começa em (0,0) -> (0, v0) -> ... -> (n, vn) -> (n, 0)
+  
+  if (n > 1) {
+    const lines = [];
+    // Ponto inicial base (bottom-left)
+    lines.push({ op: 'm', c: [getX(0), plotY + plotH] });
+    
+    // Pontos dos dados
+    valores.forEach((v, i) => {
+      lines.push({ op: 'l', c: [getX(i), getY(v)] });
+    });
+    
+    // Ponto final base (bottom-right)
+    lines.push({ op: 'l', c: [getX(n - 1), plotY + plotH] });
+    
+    // Fechar
+    lines.push({ op: 'h' });
+
+    doc.setFillColor(fill.r, fill.g, fill.b);
+    // doc.path(lines) é suportado no jsPDF moderno? Sim, ou usamos lines.
+    // Alternativa segura: construir array de coords e usar .lines() ou triangle strip
+    // Vamos usar linhas manuais ou triangle strip? path é melhor.
+    // Mas jsPDF `path` api pode ser complexa. Vamos desenhar contorno preenchido.
+    
+    doc.saveGraphicsState();
+    doc.setDrawColor(line.r, line.g, line.b); // Cor da linha, mas aqui é area
+    // Hack: desenhar shape fechado
+    doc.moveTo(getX(0), plotY + plotH);
+    valores.forEach((v, i) => doc.lineTo(getX(i), getY(v)));
+    doc.lineTo(getX(n - 1), plotY + plotH);
+    doc.closePath();
+    doc.fill(); 
+    doc.restoreGraphicsState();
+    
+    // Desenhar Linha Grossa por cima
+    doc.setDrawColor(line.r, line.g, line.b);
+    doc.setLineWidth(0.4);
+    valores.forEach((v, i) => {
+      if (i === 0) doc.moveTo(getX(i), getY(v));
+      else doc.lineTo(getX(i), getY(v));
+    });
+    doc.stroke();
+  }
+
+  // Títulos Eixos
+  doc.setFontSize(8);
+  doc.setTextColor(50);
+  doc.text('Pontos de Leitura (L)', plotX + plotW / 2, plotY + plotH + 9, { align: 'center' });
 }
 
 function setupCampoCalibracao() {
@@ -354,9 +391,10 @@ function calcular() {
       mostrarMensagem(`Erro: Valores inválidos em L${i}.`, 'error');
       return;
     }
-      // Combinação metrológica: Média Aritmética (H + V) / 2
-      // Conforme solicitação: ICS = média das leituras horizontal e vertical
-      const val = (valH + valV) / 2;
+      // Combinação metrológica: Horizontal (peso 1), Vertical (peso 0.5) normalizado?
+      // "divida ele(V) por 2 para depois somar ao horizontal e novamente dividir por 2"
+      // Fórmula literal: (H + V/2) / 2
+      const val = (valH + (valV / 2)) / 2;
     leituras.push(val);
     leiturasH.push(valH);
     leiturasV.push(valV);
@@ -424,7 +462,7 @@ function calcular() {
   // Bloco "Como foi calculado" (mantém compatibilidade com versões antigas)
   const calcTextEl = document.getElementById('calc-text');
   const calcText2El = document.getElementById('calc-text2');
-    if (calcTextEl) calcTextEl.textContent = `ICSᵢ = (Hᵢ+Vᵢ)/2; Σ(ICSᵢ)/n = ${soma.toFixed(3)}/${num} = ${media.toFixed(3)}`;
+    if (calcTextEl) calcTextEl.textContent = `ICSᵢ = (H + V/2) / 2; Σ(ICSᵢ)/n = ${soma.toFixed(3)}/${num} = ${media.toFixed(3)}`;
   if (calcText2El) calcText2El.textContent = `100 × ICS̄ = 100 × ${media.toFixed(3)} = ${percentual.toFixed(1)}%`;
 
   const calcSomaEl = document.getElementById('calc-soma');
@@ -919,7 +957,7 @@ function exportarPDF() {
   doc.setDrawColor(200);
   doc.rect(mLeft, y - 2, contentW, chartInfo.h + 5); // Box largo pegando a pagina toda
 
-  desenharBarrasFrequenciaICS(doc, chartInfo.x, chartInfo.y, chartInfo.w, chartInfo.h, d.leituras, chartTheme);
+  desenharAreaChartICS(doc, chartInfo.x, chartInfo.y, chartInfo.w, chartInfo.h, d.leituras, chartTheme);
 
   y += chartInfo.h + 10;
 
