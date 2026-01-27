@@ -424,7 +424,7 @@ function calcular() {
   // Bloco "Como foi calculado" (mantém compatibilidade com versões antigas)
   const calcTextEl = document.getElementById('calc-text');
   const calcText2El = document.getElementById('calc-text2');
-    if (calcTextEl) calcTextEl.textContent = `ICSᵢ = Hᵢ×Vᵢ; Σ(ICSᵢ)/n = ${soma.toFixed(3)}/${num} = ${media.toFixed(3)}`;
+    if (calcTextEl) calcTextEl.textContent = `ICSᵢ = (Hᵢ+Vᵢ)/2; Σ(ICSᵢ)/n = ${soma.toFixed(3)}/${num} = ${media.toFixed(3)}`;
   if (calcText2El) calcText2El.textContent = `100 × ICS̄ = 100 × ${media.toFixed(3)} = ${percentual.toFixed(1)}%`;
 
   const calcSomaEl = document.getElementById('calc-soma');
