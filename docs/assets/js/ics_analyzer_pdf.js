@@ -354,9 +354,9 @@ function calcular() {
       mostrarMensagem(`Erro: Valores inválidos em L${i}.`, 'error');
       return;
     }
-      // Combinação metrológica H×V: aproxima fração de área coberta no campo visual
-      // a partir das frações ortogonais observadas no retículo.
-      const val = valH * valV;
+      // Combinação metrológica: Média Aritmética (H + V) / 2
+      // Conforme solicitação: ICS = média das leituras horizontal e vertical
+      const val = (valH + valV) / 2;
     leituras.push(val);
     leiturasH.push(valH);
     leiturasV.push(valV);
