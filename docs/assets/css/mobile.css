@@ -1,0 +1,92 @@
+/* Mobile-specific overrides for ICS Analyzer (loaded conditionally via media query)
+   Goal: eliminate horizontal overflow and ensure single-column layout.
+*/
+
+:root {
+  --mobile-safe-padding: 1rem;
+}
+
+@media screen and (max-width: 1024px), screen and (max-device-width: 1024px) {
+  /* Make sure no element can force horizontal scrolling */
+  html, body {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Header: stack and center safely */
+  header .container,
+  .header-top,
+  .header-flex {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .header-flex,
+  .header-top {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .brand {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .brand > div {
+    width: 100%;
+    max-width: 100%;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+  }
+
+  .nav,
+  .nav-main {
+    width: 100%;
+    max-width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /* Landing page specific: let main be full width; sections handle containers */
+  .main-embrapa {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+  }
+
+  /* Avoid “overlap” causing side overflow on narrow screens */
+  .features-section {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: var(--mobile-safe-padding);
+    padding-right: var(--mobile-safe-padding);
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .content-section {
+    padding-left: var(--mobile-safe-padding);
+    padding-right: var(--mobile-safe-padding);
+  }
+
+  .content-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .team-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Wrap long text safely */
+  h1, h2, h3, h4, p, a {
+    overflow-wrap: anywhere;
+  }
+}
