@@ -259,9 +259,9 @@
       </div>
 
       <div class="button-group">
-        <button class="btn-primary" id="btnCalcular">🔢 Calcular Resultados</button>
-        <button class="btn-success" id="btnExportarPDF">📄 Exportar como PDF</button>
-        <button class="btn-secondary" id="btnLimpar">🔄 Limpar Dados</button>
+        <button type="button" class="btn-primary" id="btnCalcular">🔢 Calcular Resultados</button>
+        <button type="button" class="btn-success" id="btnExportarPDF">📄 Exportar como PDF</button>
+        <button type="button" class="btn-secondary" id="btnLimpar">🔄 Limpar Dados</button>
       </div>
 
       <div id="mensagem" class="hidden message"></div>
@@ -405,7 +405,7 @@
           <li><strong>Leitura Horizontal (H):</strong> Observe apenas a linha horizontal do retículo. Estime quanto dessa linha está sobrepondo material vegetal (cobertura).</li>
           <li><strong>Leitura Vertical (V):</strong> Observe apenas a linha vertical do retículo. Estime quanto dessa linha está sobrepondo material vegetal.</li>
           <li>Centralize o olho e evite paralaxe. Faça as duas leituras de forma independente.</li>
-          <li>No cálculo do sistema, a leitura do ponto é a média: <span class="calc-mono">ICSᵢ = (Hᵢ + Vᵢ) / 2</span>.</li>
+          <li>No cálculo do sistema, a leitura do ponto é combinada como <span class="calc-mono">ICS_i = H_i &times; V_i</span>, aproximando a fração de área coberta a partir das frações ortogonais observadas no retículo.</li>
         </ul>
 
         <p><strong>Classes (frações) para escolher:</strong></p>

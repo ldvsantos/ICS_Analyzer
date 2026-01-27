@@ -308,7 +308,8 @@ function desenharAreaChartICS(doc, x, y, w, h, valores, theme) {
     doc.moveTo(getX(0), plotY + plotH);
     valores.forEach((v, i) => doc.lineTo(getX(i), getY(v)));
     doc.lineTo(getX(n - 1), plotY + plotH);
-    doc.closePath();
+    // jsPDF provides close() to close the current path, not closePath().
+    if (typeof doc.close === 'function') doc.close();
     doc.fill(); 
     doc.restoreGraphicsState();
     
@@ -391,10 +392,9 @@ function calcular() {
       mostrarMensagem(`Erro: Valores inválidos em L${i}.`, 'error');
       return;
     }
-      // Combinação metrológica: Horizontal (peso 1), Vertical (peso 0.5) normalizado?
-      // "divida ele(V) por 2 para depois somar ao horizontal e novamente dividir por 2"
-      // Fórmula literal: (H + V/2) / 2
-      const val = (valH + (valV / 2)) / 2;
+    // Metrological combination H*V: approximates covered area fraction in the field of view
+    // from orthogonal fractions observed in the reticle.
+    const val = valH * valV;
     leituras.push(val);
     leiturasH.push(valH);
     leiturasV.push(valV);
@@ -462,7 +462,7 @@ function calcular() {
   // Bloco "Como foi calculado" (mantém compatibilidade com versões antigas)
   const calcTextEl = document.getElementById('calc-text');
   const calcText2El = document.getElementById('calc-text2');
-    if (calcTextEl) calcTextEl.textContent = `ICSᵢ = (H + V/2) / 2; Σ(ICSᵢ)/n = ${soma.toFixed(3)}/${num} = ${media.toFixed(3)}`;
+    if (calcTextEl) calcTextEl.textContent = `ICS_i = H_i*V_i; sum(ICS_i)/n = ${soma.toFixed(3)}/${num} = ${media.toFixed(3)}`;
   if (calcText2El) calcText2El.textContent = `100 × ICS̄ = 100 × ${media.toFixed(3)} = ${percentual.toFixed(1)}%`;
 
   const calcSomaEl = document.getElementById('calc-soma');
@@ -567,30 +567,31 @@ function calcular() {
 }
 
 function exportarPDF() {
-  if (!window.ultimaDados) {
-    mostrarMensagem('Erro: Execute o cálculo primeiro', 'error');
-    return;
-  }
-
-  // --- Validação básica ---
-  const numEl = document.getElementById('numLeituras');
-  if (numEl) {
-    const numAtual = parseInt(numEl.value, 10);
-    if (Number.isFinite(numAtual) && window.ultimaDados.numLeituras && numAtual !== window.ultimaDados.numLeituras) {
-      mostrarMensagem('Atenção: o número de leituras foi alterado após o cálculo. Recalcule antes de exportar.', 'error');
+  try {
+    if (!window.ultimaDados) {
+      mostrarMensagem('Erro: Execute o cálculo primeiro', 'error');
       return;
     }
-  }
 
-  if (!window.jspdf || !window.jspdf.jsPDF) {
-    mostrarMensagem('Erro: biblioteca de PDF não carregou (jsPDF).', 'error');
-    return;
-  }
+    // --- Validação básica ---
+    const numEl = document.getElementById('numLeituras');
+    if (numEl) {
+      const numAtual = parseInt(numEl.value, 10);
+      if (Number.isFinite(numAtual) && window.ultimaDados.numLeituras && numAtual !== window.ultimaDados.numLeituras) {
+        mostrarMensagem('Atenção: o número de leituras foi alterado após o cálculo. Recalcule antes de exportar.', 'error');
+        return;
+      }
+    }
 
-  const { jsPDF } = window.jspdf;
-  // Orientação Paisagem ('l') pode ser melhor para esse layout "ficha", mas o user pediu A4. 
-  // O layout da imagem parece Retrato ('p').
-  const doc = new jsPDF('p', 'mm', 'a4'); 
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+      mostrarMensagem('Erro: biblioteca de PDF não carregou (jsPDF). Verifique sua conexão com a internet ou tente abrir o sistema no navegador (não no preview do VS Code).', 'error');
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    // Orientação Paisagem ('l') pode ser melhor para esse layout "ficha", mas o user pediu A4.
+    // O layout da imagem parece Retrato ('p').
+    const doc = new jsPDF('p', 'mm', 'a4');
 
   // Dados capturados
   const d = {
@@ -1045,10 +1046,48 @@ function exportarPDF() {
     doc.restoreGraphicsState();
   }
 
-  // Nome arquivo
-  const nomeArquivo = `Relatorio_ICS_${d.projeto || 'vazio'}.pdf`;
-  doc.save(nomeArquivo);
-  mostrarMensagem(`✓ PDF exportado: ${nomeArquivo}`, 'success');
+    const sanitizeFileName = (name) => {
+      const base = String(name || 'Relatorio_ICS.pdf');
+      // Remove caracteres proibidos no Windows + normaliza espaços
+      const cleaned = base.replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim();
+      return cleaned || 'Relatorio_ICS.pdf';
+    };
+
+    const baixarPdfComFallback = (pdfDoc, fileName) => {
+      try {
+        pdfDoc.save(fileName);
+        return true;
+      } catch (err) {
+        try {
+          const blob = pdfDoc.output('blob');
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1500);
+          return true;
+        } catch (err2) {
+          console.error('Falha ao baixar PDF (save e fallback falharam):', err, err2);
+          return false;
+        }
+      }
+    };
+
+    // Nome arquivo
+    const nomeArquivo = sanitizeFileName(`Relatorio_ICS_${d.projeto || 'vazio'}.pdf`);
+    const ok = baixarPdfComFallback(doc, nomeArquivo);
+    if (ok) {
+      mostrarMensagem(`✓ PDF exportado: ${nomeArquivo}`, 'success');
+    } else {
+      mostrarMensagem('Erro: não foi possível iniciar o download do PDF. Tente abrir em um navegador (Chrome/Edge) e permitir downloads.', 'error');
+    }
+  } catch (err) {
+    console.error('Erro inesperado ao exportar PDF:', err);
+    mostrarMensagem(`Erro ao exportar PDF: ${err?.message || err}`, 'error');
+  }
 }
 
 function limpar() {
