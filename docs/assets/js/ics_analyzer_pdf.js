@@ -575,16 +575,33 @@ function exportarPDF() {
   // ==========================================
   // 1. CABEÇALHO (Logo + Títulos)
   // ==========================================
-  // Logo fictício (Texto estilizado)
-  doc.setFontSize(22);
-  doc.setFont(undefined, 'bold');
-  doc.setTextColor(40, 40, 40);
-  doc.text('ICS', mLeft, y + 10);
-  doc.setFontSize(10);
-  doc.text('Analyzer', mLeft, y + 15);
-  // Linha separadora do logo
-  // doc.setLineWidth(0.5);
-  // doc.line(mLeft + 30, y, mLeft + 30, y + 20);
+  
+  // Tenta pegar a imagem do DOM (adicionada no HTML)
+  const logoImg = document.getElementById('logo-for-pdf');
+  let logoAdicionado = false;
+
+  if (logoImg && logoImg.complete && logoImg.naturalHeight > 0) {
+    try {
+      const logoW = 35; // Largura em mm
+      const ratio = logoImg.naturalHeight / logoImg.naturalWidth;
+      const logoH = logoW * ratio;
+      // Ajusta Y para centralizar verticalmente com o título se precisar, ou topo fixo
+      doc.addImage(logoImg, 'PNG', mLeft, y, logoW, logoH);
+      logoAdicionado = true;
+    } catch (err) {
+      console.warn('Não foi possível inserir a imagem do logo no PDF:', err);
+    }
+  }
+
+  // Se a imagem falhar, desenha o texto substituto
+  if (!logoAdicionado) {
+    doc.setFontSize(22);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(40, 40, 40);
+    doc.text('ICS', mLeft, y + 10);
+    doc.setFontSize(10);
+    doc.text('Analyzer', mLeft, y + 15);
+  }
 
   // Título Principal (Direita/Centro)
   const titleX = mLeft + 40;
