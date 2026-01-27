@@ -10,83 +10,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1a5f7a 0%, #2a7fa0 100%); min-height: 100vh; padding: 20px; }
-    .container { max-width: 1000px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); overflow: hidden; }
-    .header { background: linear-gradient(135deg, #1a5f7a 0%, #2a7fa0 100%); color: white; padding: 22px 30px; border-bottom: 4px solid #0d3a47; }
-    .header-top { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; }
-    .header h1 { font-size: 20px; margin-bottom: 6px; }
-    .header p { font-size: 13px; opacity: 0.9; }
-    .nav a { color: rgba(255,255,255,0.95); text-decoration: none; font-weight: 600; font-size: 13px; padding: 8px 10px; border-radius: 6px; background: rgba(0,0,0,0.12); }
-    .nav a:hover { background: rgba(0,0,0,0.18); }
-    .content { padding: 30px; }
-    .section { margin-bottom: 30px; }
-    .section-title { font-size: 16px; font-weight: 700; color: #1a5f7a; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 2px solid #2a7fa0; }
-    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
-    .form-group { display: flex; flex-direction: column; }
-    label { font-weight: 600; margin-bottom: 6px; font-size: 13px; color: #333; }
-    input[type="text"], input[type="date"], input[type="time"], input[type="number"], select { padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
-    input:focus, select:focus { outline: none; border-color: #1a5f7a; box-shadow: 0 0 0 2px rgba(26,95,122,0.1); }
-    .readings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-bottom: 15px; }
-    .reading-input { display: flex; flex-direction: column; }
-    .reading-input label { font-size: 12px; color: #666; }
-    .reading-input input, .reading-input select { padding: 8px; font-size: 12px; text-align: center; }
-    .button-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
-    button { padding: 12px 24px; border: none; border-radius: 4px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; }
-    .btn-primary { background: #1a5f7a; color: white; }
-    .btn-primary:hover { background: #0d3a47; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(26,95,122,0.3); }
-    .btn-success { background: #27ae60; color: white; }
-    .btn-success:hover { background: #229954; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(39,174,96,0.3); }
-    .btn-secondary { background: #95a5a6; color: white; }
-    .btn-secondary:hover { background: #7f8c8d; }
-    .results { background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 6px; padding: 20px; margin-top: 20px; }
-    .results-hidden { display: none; }
-    .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
-    .result-box { background: white; border-left: 4px solid #1a5f7a; padding: 15px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .result-label { font-size: 12px; color: #666; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; }
-    .result-value { font-size: 28px; font-weight: 700; color: #1a5f7a; }
-    .result-unit { font-size: 12px; color: #999; margin-top: 4px; }
-    .result-box.success { border-left-color: #27ae60; }
-    .readings-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
-    .readings-table th { background: #1a5f7a; color: white; padding: 10px; text-align: left; font-weight: 600; }
-    .readings-table td { padding: 8px 10px; border-bottom: 1px solid #eee; }
-    .readings-table tr:hover { background: #f5f5f5; }
-    .hidden { display: none; }
-    .message { padding: 15px; border-radius: 4px; margin-bottom: 15px; font-size: 14px; }
-    .message.success { background: #d4edda; border: 1px solid #27ae60; color: #155724; }
-    .message.error { background: #f8d7da; border: 1px solid #e74c3c; color: #721c24; }
-
-    .section-title-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 2px solid #2a7fa0; }
-    .section-title-row .section-title { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
-    .help-btn { display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 1px solid rgba(26,95,122,0.25); color: #1a5f7a; padding: 8px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; cursor: pointer; }
-    .help-btn:hover { background: rgba(26,95,122,0.06); }
-    .help-icon { width: 18px; height: 18px; border-radius: 50%; background: #1a5f7a; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1; }
-
-    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 9999; }
-    .modal-backdrop.open { display: flex; }
-    .modal { width: 100%; max-width: 760px; background: #fff; border-radius: 10px; box-shadow: 0 12px 48px rgba(0,0,0,0.28); overflow: hidden; display: flex; flex-direction: column; max-height: 90vh; }
-    .modal-header { background: linear-gradient(135deg, #1a5f7a 0%, #2a7fa0 100%); color: #fff; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; }
-    .modal-header h3 { font-size: 14px; margin: 0; }
-    .modal-close { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.25); color: #fff; border-radius: 8px; padding: 6px 10px; cursor: pointer; font-weight: 700; }
-    .modal-body { padding: 18px; font-size: 14px; color: #333; line-height: 1.55; overflow-y: auto; }
-    .modal-body ul { margin: 10px 0 0 18px; }
-    .modal-sep { border: 0; border-top: 1px solid #e9ecef; margin: 12px 0; }
-
-    .form-hint { font-size: 12px; color: #666; margin-top: 6px; line-height: 1.4; }
-
-    .calc-details { margin-top: 12px; background: #ffffff; border: 1px solid #e9ecef; border-radius: 6px; overflow: hidden; }
-    .calc-details summary { cursor: pointer; list-style: none; padding: 12px 14px; font-size: 13px; font-weight: 700; color: #1a5f7a; display: flex; align-items: center; gap: 8px; background: #f8f9fa; border-bottom: 1px solid #e9ecef; }
-    .calc-details summary::-webkit-details-marker { display: none; }
-    .calc-body { padding: 12px 14px; font-size: 12.5px; color: #444; line-height: 1.5; }
-    .calc-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
-    .calc-tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: rgba(26, 95, 122, 0.12); color: #0d3a47; font-weight: 700; font-size: 11px; }
-    .calc-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background: #f3f5f7; border: 1px solid #e5e8eb; border-radius: 4px; padding: 0 6px; }
-  </style>
+  <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
-  <div class="container">
-    <div class="header">
+  <header class="header">
       <div class="header-top">
         <div style="display: flex; align-items: center; gap: 15px;">
           <img src="assets/img/logo.png" alt="Logo ICS" style="height: 50px; background: white; padding: 2px; border-radius: 4px;">
@@ -95,17 +22,17 @@
             <p>Índice de Cobertura do Solo | Sistema com exportação em PDF</p>
           </div>
         </div>
-        <div class="nav">
+        <nav class="nav">
           <a href="index.html">Início</a>
           <a href="manual.html">Manual</a>
-        </div>
+        </nav>
       </div>
-    </div>
+    </header>
 
     <!-- Hidden img for PDF generation convenience -->
     <img id="logo-for-pdf" src="assets/img/logo.png" style="display: none;">
 
-    <div class="content">
+    <main class="main-wrapper">
       <div class="section">
         <div class="section-title">📋 Dados do Projeto</div>
         <div class="form-grid">
@@ -376,8 +303,7 @@
           <tbody id="readings-table-body"></tbody>
         </table>
       </div>
-    </div>
-  </div>
+    </main>
 
   <div class="modal-backdrop" id="ajudaModal" role="dialog" aria-modal="true" aria-labelledby="ajudaTitulo" aria-hidden="true">
     <div class="modal" role="document">
