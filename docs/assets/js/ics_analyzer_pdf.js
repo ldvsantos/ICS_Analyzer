@@ -484,6 +484,7 @@ function exportarPDF() {
     return;
   }
 
+  // --- Validação básica ---
   const numEl = document.getElementById('numLeituras');
   if (numEl) {
     const numAtual = parseInt(numEl.value, 10);
@@ -494,252 +495,389 @@ function exportarPDF() {
   }
 
   if (!window.jspdf || !window.jspdf.jsPDF) {
-    mostrarMensagem('Erro: biblioteca de PDF não carregou (jsPDF). Verifique internet/CSP.', 'error');
+    mostrarMensagem('Erro: biblioteca de PDF não carregou (jsPDF).', 'error');
     return;
   }
 
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF('p', 'mm', 'a4'); // A4: 210 x 297 mm
+  // Orientação Paisagem ('l') pode ser melhor para esse layout "ficha", mas o user pediu A4. 
+  // O layout da imagem parece Retrato ('p').
+  const doc = new jsPDF('p', 'mm', 'a4'); 
 
-  const dados = {
+  // Dados capturados
+  const d = {
     ...window.ultimaDados,
     projeto: document.getElementById('projeto')?.value ?? window.ultimaDados.projeto,
     local: document.getElementById('local')?.value ?? window.ultimaDados.local,
     data: document.getElementById('data')?.value ?? window.ultimaDados.data,
     hora: document.getElementById('hora')?.value ?? window.ultimaDados.hora,
     operador: document.getElementById('operador')?.value ?? window.ultimaDados.operador,
-    area: document.getElementById('area')?.value ?? window.ultimaDados.area,
+    area: document.getElementById('area')?.value ?? window.ultimaDados.area, // Unidade Amostral
+    // Clima
     luz: document.getElementById('luz')?.value ?? window.ultimaDados.luz,
     sombra: document.getElementById('sombra')?.value ?? window.ultimaDados.sombra,
     vento: document.getElementById('vento')?.value ?? window.ultimaDados.vento,
-    precip: document.getElementById('precip')?.value ?? window.ultimaDados.precip,
     chuva: document.getElementById('chuva')?.value ?? window.ultimaDados.chuva,
-    umidade: document.getElementById('umidade')?.value ?? window.ultimaDados.umidade,
     notas: document.getElementById('notas')?.value ?? window.ultimaDados.notas,
-    distVisada: document.getElementById('distVisada')?.value ?? window.ultimaDados.distVisada,
-    campoModo: document.getElementById('campoModo')?.value ?? window.ultimaDados.campoModo,
-    campoLargura: document.getElementById('campoLargura')?.value ?? window.ultimaDados.campoLargura,
-    campoAltura: document.getElementById('campoAltura')?.value ?? window.ultimaDados.campoAltura,
   };
 
-  // Configurações de estilo
-  const primaryColor = [26, 95, 122]; // Azul principal
-  const headerHeight = 25;
-  let y = 0;
-
-  // --- HEADER ---
-  doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, 210, headerHeight, 'F');
-  
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(16);
-  doc.setFont(undefined, 'bold');
-  doc.text('ICS ANALYZER - Relatório Técnico', 15, 16);
-  
-  doc.setFont(undefined, 'normal');
-  doc.setFontSize(10);
-  doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 195, 16, { align: 'right' });
-  
-  y = 35;
-  
-  // --- SEÇÃO DE DADOS (2 COLUNAS) ---
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(11);
-  doc.setFont(undefined, 'bold');
-  doc.text('DADOS DO PROJETO', 15, y);
-  doc.text('CONDIÇÕES AMBIENTAIS', 110, y);
-  
-  y += 5;
-  doc.setFont(undefined, 'normal');
-  doc.setFontSize(9);
-  
-  const startYValues = y;
-  const leftX = 15;
-  const rightX = 110;
-  const lineHeight = 5;
-  
-  // Coluna Esquerda
-  doc.text(`Projeto: ${dados.projeto || '-'}`, leftX, y); y += lineHeight;
-  doc.text(`Local: ${dados.local || '-'}`, leftX, y); y += lineHeight;
-  doc.text(`Unidade Amostral: ${dados.area || '-'}`, leftX, y); y += lineHeight;
-  doc.text(`Data: ${dados.data || '-'} | Hora: ${dados.hora || '-'}`, leftX, y); y += lineHeight;
-  doc.text(`Operador: ${dados.operador || '-'}`, leftX, y); y += lineHeight;
-
-  // Coluna Direita (reset Y)
-  const yEnv = startYValues;
-  let yRight = yEnv;
-  doc.text(`Céu/Iluminação: ${dados.luz || '-'}`, rightX, yRight); yRight += lineHeight;
-  doc.text(`Sombra: ${dados.sombra || '-'}`, rightX, yRight); yRight += lineHeight;
-  doc.text(`Vento: ${dados.vento || '-'}`, rightX, yRight); yRight += lineHeight;
-  doc.text(`Chuva Recente: ${dados.chuva || '-'}`, rightX, yRight); yRight += lineHeight;
-  doc.text(`Obs: ${dados.notas || '-'}`, rightX, yRight); yRight += lineHeight;
-  
-  y = Math.max(y, yRight) + 5;
-
-  // --- CALIBRAÇÃO (SE HOUVER) ---
-  if (dados.campoModo === 'retangular' || dados.distVisada) {
-    doc.setDrawColor(200);
-    doc.setLineWidth(0.1);
-    doc.line(15, y, 195, y);
-    y += 5;
-    
-    doc.setFont(undefined, 'bold');
+  // --- Função Auxiliar: Texto Vertical ---
+  function verticalText(text, x, y, align = 'center') {
+    doc.saveGraphicsState();
     doc.setFontSize(10);
-    doc.text('CALIBRAÇÃO / GEOMETRIA', 15, y);
-    y += 5;
+    doc.setTextColor(0);
+    doc.setFont(undefined, 'bold');
+    // rotaciona 90 graus anti-horario
+    doc.text(text, x, y, { angle: 90, align: align });
+    doc.restoreGraphicsState();
+  }
+
+  // --- Função Auxiliar: Bloco Key-Value ---
+  function drawField(label, value, x, y, w, h) {
+    // Label em negrito
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'bold');
+    doc.text(label + ':', x + 2, y + 4.5);
+    
+    // Calcula largura do label para posicionar o valor
+    const labelW = doc.getTextWidth(label + ':');
     
     doc.setFont(undefined, 'normal');
-    doc.setFontSize(9);
-    let calibText = `Distância: ${dados.distVisada || '-'} m`;
-    if (dados.campoModo === 'retangular') {
-      calibText += ` | Geometria: Retangular (${dados.campoLargura}m x ${dados.campoAltura}m)`;
-      if (typeof dados.areaCampo === 'number') calibText += ` | Área: ${dados.areaCampo.toFixed(2)} m²`;
-    }
-    doc.text(calibText, 15, y);
-    y += 8;
-  } else {
-    y += 3;
+    doc.text(String(value || '-'), x + 2 + labelW + 2, y + 4.5);
+    
+    // Borda inferior (linha)
+    doc.setDrawColor(150);
+    doc.setLineWidth(0.1);
+    doc.line(x, y + h, x + w, y + h);
+    
+    // Borda direita vertical (opcional, para grade)
+    // doc.line(x + w, y, x + w, y + h);
   }
 
-  // --- RESULTADOS (BOX EM DESTAQUE) ---
-  const boxHeight = 35;
-  doc.setFillColor(248, 249, 250); // Fundo cinza claro
-  doc.setDrawColor(220);
-  doc.rect(15, y, 180, boxHeight, 'FD');
-  
-  const resInnerY = y + 8;
-  
+  // Margens e Coordenadas
+  const mLeft = 10;
+  const mRight = 10;
+  const pageW = 210;
+  const contentW = pageW - mLeft - mRight; // 190
+  let y = 10;
+
+  // ==========================================
+  // 1. CABEÇALHO (Logo + Títulos)
+  // ==========================================
+  // Logo fictício (Texto estilizado)
+  doc.setFontSize(22);
   doc.setFont(undefined, 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(...primaryColor);
-  doc.text('RESULTADOS DA ANÁLISE', 20, resInnerY);
-  
-  doc.setFontSize(14); // Destaque
-  doc.text(`ICS: ${dados.media.toFixed(3)}`, 20, resInnerY + 10);
-  doc.text(`Cobertura: ${dados.percentual.toFixed(1)}%`, 85, resInnerY + 10);
-  
+  doc.setTextColor(40, 40, 40);
+  doc.text('ICS', mLeft, y + 10);
   doc.setFontSize(10);
-  doc.setTextColor(0);
+  doc.text('Analyzer', mLeft, y + 15);
+  // Linha separadora do logo
+  // doc.setLineWidth(0.5);
+  // doc.line(mLeft + 30, y, mLeft + 30, y + 20);
+
+  // Título Principal (Direita/Centro)
+  const titleX = mLeft + 40;
+  doc.setFontSize(16);
   doc.setFont(undefined, 'bold');
-  doc.text(`Classe: ${dados.classe}`, 20, resInnerY + 20);
+  doc.text('SISTEMA DE ANÁLISE DE COBERTURA DE SOLO', titleX, y + 8);
+  
+  doc.setFontSize(12);
   doc.setFont(undefined, 'normal');
-  doc.text(`(${dados.classeDesc})`, 50, resInnerY + 20);
+  doc.text('RELATÓRIO TÉCNICO - ÍNDICE DE COBERTURA (ICS)', titleX, y + 15);
+
+  y += 22; // Avança Y
+
+  // Linha grossa separadora
+  doc.setLineWidth(0.5);
+  doc.setDrawColor(0);
+  doc.line(mLeft, y, pageW - mRight, y);
+  y += 2;
+
+  // ==========================================
+  // 2. BOX "DADOS CADASTRAIS / PROJETO"
+  // ==========================================
+  // Altura total desse bloco
+  const box1Height = 40; 
+  const yBox1 = y;
+
+  // Borda externa geral
+  doc.setLineWidth(0.3);
+  doc.rect(mLeft, yBox1, contentW, box1Height);
+
+  // -- Coluna Esquerda: Rótulo Vertical "DADOS DO PROJETO"
+  const colVerW = 8;
+  doc.rect(mLeft, yBox1, colVerW, box1Height); // Caixa do rótulo
+  verticalText('DADOS DO PROJETO', mLeft + 5, yBox1 + box1Height / 2, 'center');
+
+  // -- Coluna Meio: "Imagem representativa" (Placeholder)
+  // Na imagem original é grande, vamos usar 50mm
+  const colImgW = 50;
+  const imgX = mLeft + colVerW;
+  doc.setDrawColor(180);
+  doc.rect(imgX, yBox1, colImgW, box1Height);
   
-  doc.setFontSize(9);
-  doc.setTextColor(80);
-  doc.text(`Desvio: ${dados.desvio.toFixed(3)} | CV: ${dados.cv.toFixed(1)}% | Amplitude: ${dados.amplitude.toFixed(3)}`, 20, resInnerY + 26);
-  
-  y += boxHeight + 8; // Avança após o box
-  
-  // --- GRÁFICOS (APENAS BARRAS) ---
-  if (y + 60 > 280) { doc.addPage(); y = 20; }
-  
+  // Texto placeholder da imagem
+  doc.setFontSize(8);
+  doc.setTextColor(150);
+  doc.text('Local para Croqui/Foto', imgX + colImgW/2, yBox1 + box1Height/2, { align: 'center' });
   doc.setTextColor(0);
+
+  // -- Coluna Direita: Campos de Texto
+  const fieldsX = imgX + colImgW;
+  const fieldsW = contentW - colVerW - colImgW;
+  const rowH = box1Height / 5; // 5 linhas de 8mm
+
+  doc.setDrawColor(0); // Preto para linhas internas
+
+  // Linhas do grid
+  // Linha 1
+  drawField('Projeto', d.projeto, fieldsX, yBox1, fieldsW, rowH);
+  // Linha 2
+  drawField('Local/Endereço', d.local, fieldsX, yBox1 + rowH, fieldsW, rowH);
+  // Linha 3 (Dividida em 2: Data | Hora)
+  const halfW = fieldsW / 2;
+  drawField('Data', d.data, fieldsX, yBox1 + rowH * 2, halfW, rowH);
+  drawField('Hora', d.hora, fieldsX + halfW, yBox1 + rowH * 2, halfW, rowH);
+  // Linha 4 (Dividida: Operador | Área)
+  drawField('Operador', d.operador, fieldsX, yBox1 + rowH * 3, halfW, rowH);
+  drawField('Unid. Amostral', d.area, fieldsX + halfW, yBox1 + rowH * 3, halfW, rowH);
+  // Linha 5 (Notas/Obs)
+  drawField('Obs/Clima', `${d.textoClima || (d.luz + ' ' + d.notas).trim()}`, fieldsX, yBox1 + rowH * 4, fieldsW, rowH);
+
+  y += box1Height + 5;
+
+  // ==========================================
+  // 3. BARRA "DADOS GERAIS" (Resultados Resumidos)
+  // ==========================================
+  // Título da Seção
+  doc.setFontSize(10);
   doc.setFont(undefined, 'bold');
-  doc.setFontSize(11);
-  doc.text('ANÁLISE GRÁFICA', 15, y);
-  y += 5;
+  doc.text('DADOS GERAIS DA ANÁLISE', mLeft + contentW/2, y, { align: 'center' });
+  // Linhas grossas estilo cabeçalho
+  doc.setLineWidth(0.5);
+  doc.line(mLeft, y + 1, pageW - mRight, y + 1);
+  y += 2;
+
+  // Tabela Dados Gerais (1 linha)
+  // Colunas: N. Leituras | ICS Médio | Cobertura % | Desvio Padrão
+  const rowGenH = 8;
+  const colGenW = contentW / 4;
   
-  // Configuração visual dos gráficos
-  const theme = {
+  // Fundo cinza nos labels? Vamos fazer estilo "Label: Valor" em caixa
+  function drawGenBox(label, value, idx) {
+    const bx = mLeft + idx * colGenW;
+    
+    // Fundo cinza claro no label
+    doc.setFillColor(230);
+    doc.rect(bx, y, colGenW, rowGenH, 'F'); // Fundo total ou parcial? 
+    // Vamos fazer estilo imagem: Label esquerda cinza, Valor direita branco?
+    // A imagem: "No. ambientes (label) | 7 (valor) | Area (label) | 208 (valor)"
+    // Vamos replicar: Label (cinza) | Valor (branco)
+    
+    const labelPartW = colGenW * 0.6;
+    const valPartW = colGenW * 0.4;
+    
+    doc.setFillColor(220); // Cinza label
+    doc.rect(bx, y, labelPartW, rowGenH, 'F');
+    doc.rect(bx, y, colGenW, rowGenH); // Borda full
+
+    doc.setFillColor(255); // Branco valor
+    doc.rect(bx + labelPartW, y, valPartW, rowGenH, 'F');
+    doc.rect(bx + labelPartW, y, valPartW, rowGenH); // Borda valor
+
+    doc.setFontSize(8);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(0);
+    doc.text(label, bx + 2, y + 5);
+
+    doc.setFont(undefined, 'normal');
+    doc.text(String(value), bx + labelPartW + 2, y + 5);
+  }
+
+  drawGenBox('No. Leituras', d.numLeituras, 0);
+  drawGenBox('ICS Médio', d.media.toFixed(3), 1);
+  drawGenBox('Cobertura (%)', d.percentual.toFixed(1), 2);
+  drawGenBox('Desvio Padrão', d.desvio.toFixed(2), 3);
+
+  y += rowGenH + 5;
+
+  // ==========================================
+  // 4. "DISTRIBUIÇÃO POR CLASSES" (Estilo tabela de sistemas)
+  // ==========================================
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'bold');
+  doc.text('DISTRIBUIÇÃO DE FREQUÊNCIA (CLASSES)', mLeft + contentW/2, y, { align: 'center' });
+  doc.setLineWidth(0.5);
+  doc.line(mLeft, y + 1, pageW - mRight, y + 1);
+  y += 2;
+
+  // Calcular contagens
+  const bins = [0.00, 0.25, 0.50, 0.75, 1.00];
+  const labels = ['0.00 (Solo)', '0.25 (Baixa)', '0.50 (Média)', '0.75 (Alta)', '1.00 (Total)'];
+  const counts = [0, 0, 0, 0, 0];
+  const areas = [0, 0, 0, 0, 0]; // Se tivesse área m2
+  
+  d.leituras.forEach(v => {
+    // Encontrar bin mais próximo
+    let bestIdx = 0;
+    let minDiff = Infinity;
+    bins.forEach((b, i) => {
+      const diff = Math.abs(v - b);
+      if (diff < minDiff) { minDiff = diff; bestIdx = i; }
+    });
+    counts[bestIdx]++;
+  });
+
+  const total = d.numLeituras;
+  
+  // Desenhar Grid de 5 colunas
+  const blkH = 15;
+  const blkW = contentW / 5;
+
+  labels.forEach((lab, i) => {
+    const bx = mLeft + i * blkW;
+    
+    // Header (Nome da classe) com fundo cinza
+    doc.setFillColor(220);
+    doc.rect(bx, y, blkW, 6, 'F');
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.2);
+    doc.rect(bx, y, blkW, 6); // Borda
+
+    doc.setFontSize(8);
+    doc.setFont(undefined, 'bold');
+    doc.text(lab, bx + blkW/2, y + 4, { align: 'center' });
+
+    // Corpo (Contagem e %)
+    // Linha 1: Contagem
+    doc.rect(bx, y + 6, blkW, 9); // Borda corpo
+    
+    doc.setFont(undefined, 'normal');
+    const pct = ((counts[i] / total) * 100).toFixed(1) + '%';
+    
+    doc.text(`N: ${counts[i]}`, bx + 2, y + 10);
+    doc.text(`Pct: ${pct}`, bx + 2, y + 13.5);
+  });
+
+  y += blkH + 10;
+
+  // ==========================================
+  // 5. GRÁFICO (Centralizado)
+  // ==========================================
+  // Título Gráfico
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'bold');
+  doc.text('REPRESENTAÇÃO GRÁFICA', mLeft + contentW/2, y, { align: 'center' });
+  doc.line(mLeft, y + 1, pageW - mRight, y + 1);
+  y += 5;
+
+  const chartInfo = {
+    x: (pageW - 100) / 2, // Centraliza 100mm
+    y: y,
+    w: 100,
+    h: 50
+  };
+
+  // Reutiliza função de desenho de barras (nativa PDF)
+  // Precisamos adaptar a função `desenharBarrasFrequenciaICS` para não desenhar fundo/borda se não quisermos
+  // Mas o style "clean" atual já é bom.
+  
+  // Tema para o gráfico ficar "limpo" no papel branco
+  const chartTheme = {
     panelHex: '#FFFFFF',
-    barAHex: '#1a5f7a',
-    barBHex: '#6ab0de',
-    hatchHex: null, // Sem hachuras
+    barAHex: '#404040', // Cinza escuro
+    barBHex: '#808080', // Cinza médio
+    hatchHex: null
   };
   
-  // Gráfico centralizado e sem boxplot
-  const chartW = 90;
-  const chartH = 50; 
-  const chartX = (210 - chartW) / 2; // Centralizado (60mm)
+  // Adiciona moldura ao redor da área do gráfico para parecer o "box" da imagem
+  doc.setLineWidth(0.1);
+  doc.setDrawColor(200);
+  doc.rect(mLeft, y - 2, contentW, chartInfo.h + 5); // Box largo pegando a pagina toda
 
-  desenharBarrasFrequenciaICS(doc, chartX, y, chartW, chartH, dados.leituras, theme);
-  
-  y += chartH + 10;
-  
-  // --- TABELA DE LEITURAS ---
-  if (y + 15 > 280) { doc.addPage(); y = 20; }
-  
-  doc.setFont(undefined, 'bold');
-  doc.setFontSize(11);
-  doc.text('DETALHAMENTO DAS LEITURAS', 15, y);
-  y += 6;
-  
-  // Tabela mais estreita e centralizada
-  const tableWidth = 160;
-  const tableX = (210 - tableWidth) / 2; // 25mm margem
-  
-  // Cabeçalho da Tabela
-  function drawTableHeader(posY) {
-    doc.setFillColor(...primaryColor);
-    doc.rect(tableX, posY, tableWidth, 7, 'F');
-    doc.setTextColor(255);
-    doc.setFontSize(9);
-    doc.setFont(undefined, 'bold');
-    
-    // Colunas: #, ICS, Cobertura, Classe, Situação
-    doc.text('#', tableX + 5, posY + 5);
-    doc.text('Valor ICS', tableX + 25, posY + 5);
-    doc.text('Cobertura (%)', tableX + 55, posY + 5);
-    doc.text('Classe', tableX + 90, posY + 5);
-    doc.text('Situação', tableX + 120, posY + 5);
-    
-    doc.setTextColor(0);
-    return posY + 7;
+  desenharBarrasFrequenciaICS(doc, chartInfo.x, chartInfo.y, chartInfo.w, chartInfo.h, d.leituras, chartTheme);
+
+  y += chartInfo.h + 10;
+
+  // ==========================================
+  // 6. DETALHAMENTO DAS LEITURAS (Tabela Longa)
+  // ==========================================
+  // Se houver espaço, começa aqui. Se não, nova página.
+  if (y + 20 > 280) {
+    doc.addPage();
+    y = 20;
   }
+
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'bold');
+  doc.text('DETALHAMENTO TABULAR', mLeft + contentW/2, y, { align: 'center' });
+  doc.line(mLeft, y + 1, pageW - mRight, y + 1);
+  y += 5;
+
+  // Tabela centralizada
+  const tableW = 140;
+  const tableX = (pageW - tableW) / 2;
+  const rowTabH = 6;
+
+  // Header Tabela
+  doc.setFillColor(220);
+  doc.rect(tableX, y, tableW, rowTabH, 'F');
+  doc.rect(tableX, y, tableW, rowTabH); // Borda
   
-  y = drawTableHeader(y);
-  
+  doc.setFontSize(8);
+  doc.text('#', tableX + 5, y + 4);
+  doc.text('Valor', tableX + 25, y + 4);
+  doc.text('Classe Utilizada', tableX + 60, y + 4);
+  doc.text('Descrição', tableX + 100, y + 4);
+
+  y += rowTabH;
+
   doc.setFont(undefined, 'normal');
-  
-  dados.leituras.forEach((val, i) => {
-    // Nova página se necessário
+
+  d.leituras.forEach((val, i) => {
     if (y > 280) {
       doc.addPage();
       y = 20;
-      y = drawTableHeader(y);
+      // Repete header se quiser, simplificando aqui
     }
-    
-    // Zebra striping SUTIL ou removida (user disse zebra das BARRAS, mas tabelas clean são boas)
-    // Mantendo zebra de tabela pois o pedido foi "zebra das barras"
-    if (i % 2 === 1) {
-      doc.setFillColor(245, 245, 245);
-      doc.rect(tableX, y, tableWidth, 6, 'F');
-    }
-    
-    let classeLeitura;
-    let classeDescCurta;
-    
-    if (val < 0.125) { classeLeitura = '0.00'; classeDescCurta = 'Solo Exposto'; }
-    else if (val < 0.375) { classeLeitura = '0.25'; classeDescCurta = 'Baixa'; }
-    else if (val < 0.625) { classeLeitura = '0.50'; classeDescCurta = 'Intermediária'; }
-    else if (val < 0.875) { classeLeitura = '0.75'; classeDescCurta = 'Alta'; }
-    else { classeLeitura = '1.00'; classeDescCurta = 'Total'; }
-    
-    doc.setFontSize(9);
-    doc.text(`L${i + 1}`, tableX + 5, y + 4);
+
+    doc.rect(tableX, y, tableW, rowTabH); // Borda linha
+
+    let classeLeitura, descLeitura;
+    if (val < 0.125) { classeLeitura='0.00'; descLeitura='Solo Exposto'; }
+    else if (val < 0.375) { classeLeitura='0.25'; descLeitura='Baixa'; }
+    else if (val < 0.625) { classeLeitura='0.50'; descLeitura='Intermediária'; }
+    else if (val < 0.875) { classeLeitura='0.75'; descLeitura='Alta'; }
+    else { classeLeitura='1.00'; descLeitura='Total'; }
+
+    doc.text(String(i + 1), tableX + 5, y + 4);
     doc.text(val.toFixed(2), tableX + 25, y + 4);
-    doc.text(`${(val * 100).toFixed(1)}%`, tableX + 55, y + 4);
-    doc.text(classeLeitura, tableX + 90, y + 4);
-    doc.text(classeDescCurta, tableX + 120, y + 4);
-    
-    // Linha sutil separadora apenas na área da tabela
-    doc.setDrawColor(230);
-    doc.line(tableX, y + 6, tableX + tableWidth, y + 6);
-    
-    y += 6;
+    doc.text(classeLeitura, tableX + 60, y + 4);
+    doc.text(descLeitura, tableX + 100, y + 4);
+
+    y += rowTabH;
   });
-  
-  // --- RODAPÉ ---
+
+  // ==========================================
+  // TEXTO LATERAL DIREITO (Marca d'água vertical)
+  // ==========================================
   const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+    doc.saveGraphicsState();
     doc.setFontSize(8);
     doc.setTextColor(150);
-    doc.text(`Página ${i} de ${pageCount} - ICS Analyzer`, 105, 290, { align: 'center' });
+    // Texto na margem direita, rotacionado
+    // x = 205 (perto da borda), y = 200 (meio vertical)
+    doc.text('ICS ANALYZER - MÉTODO VISUAL PATENT', 205, 200, { angle: 90, align: 'center' });
+    
+    // Rodapé Padrão
+    doc.text(`Página ${p} de ${pageCount} - Gerado em ${new Date().toLocaleDateString()}`, 105, 292, { align: 'center', angle: 0 });
+    doc.restoreGraphicsState();
   }
 
-  const nomeArquivo = `ICS_${dados.projeto || 'Analise'}_${new Date().toISOString().split('T')[0]}.pdf`;
+  // Nome arquivo
+  const nomeArquivo = `Relatorio_ICS_${d.projeto || 'vazio'}.pdf`;
   doc.save(nomeArquivo);
   mostrarMensagem(`✓ PDF exportado: ${nomeArquivo}`, 'success');
 }
