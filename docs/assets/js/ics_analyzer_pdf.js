@@ -1123,7 +1123,7 @@ function exportarPDF() {
       const valueFontSize = 7;
       doc.setFontSize(valueFontSize);
 
-      const lineHeight = 3.3; // mm (aprox.)
+      const lineHeight = 3.0; // mm (aprox. mais justo para evitar overflow)
       const maxLines = Math.max(1, Math.floor((h - 2) / lineHeight));
       let lines = doc.splitTextToSize(rawValue, valueMaxW);
 
@@ -1418,7 +1418,8 @@ function exportarPDF() {
 
   // Linha 2: CV, Classe, Amplitude, (Min..Max)
   drawGenBox('CV (%)', cvTxt, 0);
-  drawGenBox('Classificação', classeTxt, 1, { labelRatio: 0.68, labelFontSize: 7, valueFontSize: 7 });
+  // Ajuste: labelRatio menor para dar mais espaço ao valor da Classificação (texto longo)
+  drawGenBox('Classificação', classeTxt, 1, { labelRatio: 0.35, labelFontSize: 7, valueFontSize: 7 });
   drawGenBox('Amplitude', ampTxt, 2);
   drawGenBox('Min..Max', `${minTxt}..${maxTxt}`, 3, { labelRatio: 0.62, labelFontSize: 7, valueFontSize: 7 });
 
@@ -1450,7 +1451,8 @@ function exportarPDF() {
 
     const hasLinha1 = (riscoTxt !== '-') || (exposicaoTxt !== '-') || (chuva7dTxt !== '-') || (chuva30dTxt !== '-');
     if (hasLinha1) {
-      const opts = { labelRatio: 0.68, labelFontSize: 7, valueFontSize: 7 };
+      // Ajuste: labelFontSize reduzido para caber "Chuva 7d (mm)" sem cortar
+      const opts = { labelRatio: 0.68, labelFontSize: 6.5, valueFontSize: 7 };
       drawGenBox('Risco erosão', riscoTxt, 0, opts);
       drawGenBox('Exposição', exposicaoTxt, 1, opts);
       drawGenBox('Chuva 7d (mm)', chuva7dTxt, 2, opts);
