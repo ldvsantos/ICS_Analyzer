@@ -65,11 +65,11 @@
 
     .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 9999; }
     .modal-backdrop.open { display: flex; }
-    .modal { width: 100%; max-width: 760px; background: #fff; border-radius: 10px; box-shadow: 0 12px 48px rgba(0,0,0,0.28); overflow: hidden; }
-    .modal-header { background: linear-gradient(135deg, #1a5f7a 0%, #2a7fa0 100%); color: #fff; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .modal { width: 100%; max-width: 760px; background: #fff; border-radius: 10px; box-shadow: 0 12px 48px rgba(0,0,0,0.28); overflow: hidden; display: flex; flex-direction: column; max-height: 90vh; }
+    .modal-header { background: linear-gradient(135deg, #1a5f7a 0%, #2a7fa0 100%); color: #fff; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; }
     .modal-header h3 { font-size: 14px; margin: 0; }
     .modal-close { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.25); color: #fff; border-radius: 8px; padding: 6px 10px; cursor: pointer; font-weight: 700; }
-    .modal-body { padding: 18px; font-size: 14px; color: #333; line-height: 1.55; }
+    .modal-body { padding: 18px; font-size: 14px; color: #333; line-height: 1.55; overflow-y: auto; }
     .modal-body ul { margin: 10px 0 0 18px; }
     .modal-sep { border: 0; border-top: 1px solid #e9ecef; margin: 12px 0; }
 
