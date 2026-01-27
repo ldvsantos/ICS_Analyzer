@@ -224,7 +224,7 @@ function desenharBoxplotICS(doc, x, y, w, h, valores, theme) {
 }
 
 function desenharAreaChartICS(doc, x, y, w, h, valores, theme) {
-  const { panelHex = '#FFFFFF', lineHex = '#1a5f7a', fillHex = '#a8dadc' } = theme || {};
+  const { panelHex = '#FFFFFF', lineHex = '#1a5f7a', fillHex = '#b7e4c7' } = theme || {};
   const panel = hexToRgb(panelHex);
   const line = hexToRgb(lineHex);
   const fill = hexToRgb(fillHex);
@@ -263,7 +263,7 @@ function desenharAreaChartICS(doc, x, y, w, h, valores, theme) {
   ticksY.forEach(t => {
     const yy = getY(t);
     doc.line(plotX, yy, plotX + plotW, yy);
-    doc.text(t.toFixed(1), plotX - 2, yy + 1, { align: 'right' });
+    doc.text(`${Math.round(t * 100)}%`, plotX - 2, yy + 1, { align: 'right' });
   });
 
   // Grid X (opcional, só ticks)
@@ -326,6 +326,7 @@ function desenharAreaChartICS(doc, x, y, w, h, valores, theme) {
   // Títulos Eixos
   doc.setFontSize(8);
   doc.setTextColor(50);
+  doc.text('ICS (%)', plotX - 8, plotY + plotH / 2, { angle: 90, align: 'center' });
   doc.text('Pontos de Leitura (L)', plotX + plotW / 2, plotY + plotH + 9, { align: 'center' });
 }
 
@@ -948,9 +949,8 @@ function exportarPDF() {
   // Tema para o gráfico ficar "limpo" no papel branco
   const chartTheme = {
     panelHex: '#FFFFFF',
-    barAHex: '#404040', // Cinza escuro
-    barBHex: '#808080', // Cinza médio
-    hatchHex: null
+    lineHex: '#1a5f7a',
+    fillHex: '#b7e4c7'
   };
   
   // Adiciona moldura ao redor da área do gráfico para parecer o "box" da imagem
