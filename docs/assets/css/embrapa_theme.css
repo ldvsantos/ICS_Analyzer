@@ -295,6 +295,7 @@
   color: var(--primary);
   margin-bottom: 0.5rem;
   font-size: 1.15rem;
+  overflow-wrap: anywhere;
 }
 
 .team-card .role {
@@ -302,6 +303,7 @@
   font-size: 0.9rem;
   font-weight: 500;
   margin-bottom: 0.25rem;
+  overflow-wrap: anywhere;
 }
 
 .team-card .role-detail {

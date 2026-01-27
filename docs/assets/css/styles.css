@@ -37,6 +37,7 @@
 
 html {
   height: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -87,6 +88,12 @@ header, .header {
   align-items: center;
   gap: 2rem;
   flex-wrap: wrap;
+}
+
+.header-flex > *,
+.brand,
+.nav-main {
+  min-width: 0;
 }
 
 /* Fix for existing HTML structure using .header */
@@ -656,6 +663,35 @@ button, .btn {
 }
 
 /* Responsive - Tablet and Mobile */
+@media (max-width: 900px) {
+  .header-flex {
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .brand {
+    width: 100%;
+    text-align: center;
+  }
+
+  .brand > div {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .nav-main {
+    width: 100%;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .nav-link {
+    white-space: normal;
+  }
+}
+
 @media (max-width: 768px) {
   .hero-index {
     grid-template-columns: 1fr;
