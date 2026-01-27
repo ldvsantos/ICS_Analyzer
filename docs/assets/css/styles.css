@@ -103,9 +103,9 @@ header, .header {
   align-items: center;
   flex-wrap: wrap;
   gap: 1rem;
-  max-width: 1200px;
+  max-width: 100%; /* Changed from 1200px to 100% to avoid overflow */
   margin: 0 auto;
-  padding: 0 1rem;
+  padding: 0; /* Padding handled by container */
 }
 
 .brand > div, .header-top > div:first-child {
@@ -663,6 +663,35 @@ button, .btn {
 }
 
 /* Responsive - Tablet and Mobile */
+@media (max-width: 1024px) {
+  .header-flex {
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .brand {
+    width: 100%;
+    text-align: center;
+  }
+
+  .brand > div {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .nav-main {
+    width: 100%;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .nav-link {
+    white-space: normal;
+  }
+}
+
 @media (max-width: 900px) {
   .header-flex {
     flex-direction: column;
