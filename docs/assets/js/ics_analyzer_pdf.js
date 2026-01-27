@@ -10,11 +10,12 @@ function setupLeituras() {
 
   const opcoes = [
     { value: '', label: 'Selecione' },
-    { value: '0.00', label: '0.00 (0%)' },
-    { value: '0.25', label: '0.25 (25%)' },
-    { value: '0.50', label: '0.50 (50%)' },
-    { value: '0.75', label: '0.75 (75%)' },
-    { value: '1.00', label: '1.00 (100%)' },
+    { value: '0.00', label: '0.0 (0%)' },
+    { value: '0.20', label: '0.2 (20%)' },
+    { value: '0.40', label: '0.4 (40%)' },
+    { value: '0.60', label: '0.6 (60%)' },
+    { value: '0.80', label: '0.8 (80%)' },
+    { value: '1.00', label: '1.0 (100%)' },
   ];
 
   for (let i = 1; i <= num; i++) {
@@ -220,11 +221,13 @@ function desenharBarrasFrequenciaICS(doc, x, y, w, h, valores, theme) {
   const barB = hexToRgb(barBHex);
   const hatch = hexToRgb(hatchHex);
 
-  const bins = [0, 0.25, 0.5, 0.75, 1.0];
-  const labels = ['0%', '25%', '50%', '75%', '100%'];
+  // Ajustado para escala 0.0, 0.2, 0.4, 0.6, 0.8, 1.0
+  const bins = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
+  const labels = ['0.0', '0.2', '0.4', '0.6', '0.8', '1.0'];
   const counts = new Array(bins.length).fill(0);
   (valores || []).forEach((v) => {
-    const idx = bins.findIndex((b) => Math.abs(v - b) < 1e-9);
+    // Tolerância para float
+    const idx = bins.findIndex((b) => Math.abs(v - b) < 1e-5);
     if (idx >= 0) counts[idx] += 1;
   });
   const maxCount = Math.max(1, ...counts);
@@ -326,7 +329,7 @@ function calcular() {
     const raw = input?.value ?? '';
     const val = raw === '' ? NaN : parseFloat(raw);
     if (Number.isNaN(val) || val < 0 || val > 1) {
-      mostrarMensagem(`Erro: Selecione uma classe válida em todas as ${num} leituras (0.00, 0.25, 0.50, 0.75, 1.00). Falha em L${i}.`, 'error');
+      mostrarMensagem(`Erro: Selecione uma classe válida em todas as ${num} leituras (0.0, 0.2, 0.4, 0.6, 0.8, 1.0). Falha em L${i}.`, 'error');
       return;
     }
     leituras.push(val);
@@ -720,10 +723,10 @@ function exportarPDF() {
   y += 2;
 
   // Calcular contagens
-  const bins = [0.00, 0.25, 0.50, 0.75, 1.00];
-  const labels = ['0.00 (Solo)', '0.25 (Baixa)', '0.50 (Média)', '0.75 (Alta)', '1.00 (Total)'];
-  const counts = [0, 0, 0, 0, 0];
-  const areas = [0, 0, 0, 0, 0]; // Se tivesse área m2
+  const bins = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
+  const labels = ['0.0', '0.2', '0.4', '0.6', '0.8', '1.0'];
+  const counts = [0, 0, 0, 0, 0, 0];
+  const areas = [0, 0, 0, 0, 0, 0]; // Se tivesse área m2
   
   d.leituras.forEach(v => {
     // Encontrar bin mais próximo
@@ -738,9 +741,9 @@ function exportarPDF() {
 
   const total = d.numLeituras;
   
-  // Desenhar Grid de 5 colunas
+  // Desenhar Grid de 6 colunas
   const blkH = 15;
-  const blkW = contentW / 5;
+  const blkW = contentW / 6;
 
   labels.forEach((lab, i) => {
     const bx = mLeft + i * blkW;
@@ -852,11 +855,12 @@ function exportarPDF() {
     doc.rect(tableX, y, tableW, rowTabH); // Borda linha
 
     let classeLeitura, descLeitura;
-    if (val < 0.125) { classeLeitura='0.00'; descLeitura='Solo Exposto'; }
-    else if (val < 0.375) { classeLeitura='0.25'; descLeitura='Baixa'; }
-    else if (val < 0.625) { classeLeitura='0.50'; descLeitura='Intermediária'; }
-    else if (val < 0.875) { classeLeitura='0.75'; descLeitura='Alta'; }
-    else { classeLeitura='1.00'; descLeitura='Total'; }
+    if (val < 0.1) { classeLeitura='0.0'; descLeitura='Solo Exposto'; }
+    else if (val < 0.3) { classeLeitura='0.2'; descLeitura='Baixa'; }
+    else if (val < 0.5) { classeLeitura='0.4'; descLeitura='Média-Baixa'; }
+    else if (val < 0.7) { classeLeitura='0.6'; descLeitura='Média-Alta'; }
+    else if (val < 0.9) { classeLeitura='0.8'; descLeitura='Alta'; }
+    else { classeLeitura='1.0'; descLeitura='Total'; }
 
     doc.text(String(i + 1), tableX + 5, y + 4);
     doc.text(val.toFixed(2), tableX + 25, y + 4);
