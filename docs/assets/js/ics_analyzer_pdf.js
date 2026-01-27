@@ -22,13 +22,22 @@ function setupLeituras() {
     const div = document.createElement('div');
     div.className = 'reading-input';
     const optionsHtml = opcoes
+      .filter(o => o.value !== '') 
       .map((o) => `<option value="${o.value}">${o.label}</option>`)
       .join('');
+
     div.innerHTML = `
-      <label for="leitura${i}">L${i}</label>
-      <select id="leitura${i}" aria-label="Leitura ${i}">
-        ${optionsHtml}
-      </select>
+      <label style="font-weight:bold; margin-bottom:2px;">L${i}</label>
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        <select id="leitura${i}H" aria-label="Leitura ${i} Horizontal" style="font-size:11px; padding:4px;" title="Horizontal">
+          <option value="" disabled selected>Horiz.</option>
+          ${optionsHtml}
+        </select>
+        <select id="leitura${i}V" aria-label="Leitura ${i} Vertical" style="font-size:11px; padding:4px;" title="Vertical">
+          <option value="" disabled selected>Vert.</option>
+          ${optionsHtml}
+        </select>
+      </div>
     `;
     container.appendChild(div);
   }
@@ -157,7 +166,7 @@ function desenharBoxplotICS(doc, x, y, w, h, valores, theme) {
 
   doc.setFontSize(7);
   doc.setTextColor(90);
-  const ticks = [0, 0.25, 0.5, 0.75, 1];
+  const ticks = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
   ticks.forEach((t) => {
     const ty = yFromVal(t);
     doc.setDrawColor(180);
@@ -325,13 +334,25 @@ function calcular() {
   const leituras = [];
 
   for (let i = 1; i <= num; i++) {
-    const input = document.getElementById(`leitura${i}`);
-    const raw = input?.value ?? '';
-    const val = raw === '' ? NaN : parseFloat(raw);
-    if (Number.isNaN(val) || val < 0 || val > 1) {
-      mostrarMensagem(`Erro: Selecione uma classe válida em todas as ${num} leituras (0.0, 0.2, 0.4, 0.6, 0.8, 1.0). Falha em L${i}.`, 'error');
+    const inputH = document.getElementById(`leitura${i}H`);
+    const inputV = document.getElementById(`leitura${i}V`);
+    
+    const rawH = inputH?.value ?? '';
+    const rawV = inputV?.value ?? '';
+    
+    if (rawH === '' || rawV === '') {
+      mostrarMensagem(`Erro: Preencha as leituras Horizontal e Vertical no ponto L${i}.`, 'error');
       return;
     }
+    
+    const valH = parseFloat(rawH);
+    const valV = parseFloat(rawV);
+
+    if (Number.isNaN(valH) || valH < 0 || valH > 1 || Number.isNaN(valV) || valV < 0 || valV > 1) {
+      mostrarMensagem(`Erro: Valores inválidos em L${i}.`, 'error');
+      return;
+    }
+    const val = (valH + valV) / 2;
     leituras.push(val);
   }
 
@@ -371,21 +392,24 @@ function calcular() {
 
   let classe;
   let classeDesc;
-  if (media < 0.125) {
+  if (media < 0.1) {
     classe = '0.00';
     classeDesc = 'Solo Exposto / Negligenciável';
-  } else if (media < 0.375) {
-    classe = '0.25';
-    classeDesc = 'Cobertura Baixa (12.5-37.5%)';
-  } else if (media < 0.625) {
-    classe = '0.50';
-    classeDesc = 'Cobertura Intermediária (37.5-62.5%)';
-  } else if (media < 0.875) {
-    classe = '0.75';
-    classeDesc = 'Cobertura Alta (62.5-87.5%)';
+  } else if (media < 0.3) {
+    classe = '0.20';
+    classeDesc = 'Cobertura Baixa (10-30%)';
+  } else if (media < 0.5) {
+    classe = '0.40';
+    classeDesc = 'Cobertura Baixa-Média (30-50%)';
+  } else if (media < 0.7) {
+    classe = '0.60';
+    classeDesc = 'Cobertura Média-Alta (50-70%)';
+  } else if (media < 0.9) {
+    classe = '0.80';
+    classeDesc = 'Cobertura Alta (70-90%)';
   } else {
     classe = '1.00';
-    classeDesc = 'Cobertura Total (≥87.5%)';
+    classeDesc = 'Cobertura Total (>90%)';
   }
 
   document.getElementById('media').textContent = media.toFixed(3);
@@ -420,10 +444,11 @@ function calcular() {
   tbody.innerHTML = '';
   leituras.forEach((val, idx) => {
     let classeLeitura;
-    if (val < 0.125) classeLeitura = '0.00';
-    else if (val < 0.375) classeLeitura = '0.25';
-    else if (val < 0.625) classeLeitura = '0.50';
-    else if (val < 0.875) classeLeitura = '0.75';
+    if (val < 0.1) classeLeitura = '0.00';
+    else if (val < 0.3) classeLeitura = '0.20';
+    else if (val < 0.5) classeLeitura = '0.40';
+    else if (val < 0.7) classeLeitura = '0.60';
+    else if (val < 0.9) classeLeitura = '0.80';
     else classeLeitura = '1.00';
 
     const tr = document.createElement('tr');
@@ -580,14 +605,17 @@ function exportarPDF() {
   const logoImg = document.getElementById('logo-for-pdf');
   let logoAdicionado = false;
 
-  if (logoImg && logoImg.complete && logoImg.naturalHeight > 0) {
+  if (logoImg) {
     try {
-      const logoW = 35; // Largura em mm
-      const ratio = logoImg.naturalHeight / logoImg.naturalWidth;
-      const logoH = logoW * ratio;
-      // Ajusta Y para centralizar verticalmente com o título se precisar, ou topo fixo
-      doc.addImage(logoImg, 'PNG', mLeft, y, logoW, logoH);
-      logoAdicionado = true;
+      if (logoImg.complete && logoImg.naturalHeight > 0) {
+        const logoW = 30; // Largura em mm
+        const ratio = logoImg.naturalHeight / logoImg.naturalWidth;
+        const logoH = logoW * ratio;
+        doc.addImage(logoImg, 'PNG', mLeft, y, logoW, logoH);
+        logoAdicionado = true;
+      } else {
+        console.warn('Logo existe mas não está carregado (complete=false).');
+      }
     } catch (err) {
       console.warn('Não foi possível inserir a imagem do logo no PDF:', err);
     }
@@ -607,11 +635,12 @@ function exportarPDF() {
   const titleX = mLeft + 40;
   doc.setFontSize(16);
   doc.setFont(undefined, 'bold');
-  doc.text('SISTEMA DE ANÁLISE DE COBERTURA DE SOLO', titleX, y + 8);
+  // Ajustado Y para alinhar melhor com o logo (centro ~25mm)
+  doc.text('SISTEMA DE ANÁLISE DE COBERTURA DE SOLO', titleX, y + 12);
   
   doc.setFontSize(12);
   doc.setFont(undefined, 'normal');
-  doc.text('RELATÓRIO TÉCNICO - ÍNDICE DE COBERTURA (ICS)', titleX, y + 15);
+  doc.text('RELATÓRIO TÉCNICO - ÍNDICE DE COBERTURA (ICS)', titleX, y + 19);
 
   y += 22; // Avança Y
 
@@ -896,8 +925,8 @@ function exportarPDF() {
     doc.saveGraphicsState();
     doc.setFontSize(8);
     doc.setTextColor(150);
-    // Texto na margem direita, rotacionado, bem no canto
-    doc.text('ICS ANALYZER - MÉTODO VISUAL PATENT', 207, 200, { angle: 90, align: 'center' });
+    // Texto na margem direita, rotacionado, recuado para evitar corte (207 -> 200)
+    doc.text('ICS ANALYZER - MÉTODO VISUAL PATENT', 200, 200, { angle: 90, align: 'center' });
     
     // Rodapé Padrão
     doc.text(`Página ${p} de ${pageCount} - Gerado em ${new Date().toLocaleDateString()}`, 105, 292, { align: 'center', angle: 0 });
