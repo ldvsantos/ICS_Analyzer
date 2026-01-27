@@ -635,12 +635,14 @@ function exportarPDF() {
   const titleX = mLeft + 40;
   doc.setFontSize(16);
   doc.setFont(undefined, 'bold');
-  // Ajustado Y para alinhar melhor com o logo (centro ~25mm)
-  doc.text('SISTEMA DE ANÁLISE DE COBERTURA DE SOLO', titleX, y + 12);
+  // Ajustado Y para alinhar melhor com o logo (centro ~10mm + meio logoH)
+  // Assumindo logoH ~15-20mm (logoW=30, ratio ~0.5-0.7)
+  // Vamos tentar alinhar com o topo do logo + um pouco
+  doc.text('SISTEMA DE ANÁLISE DE COBERTURA DE SOLO', titleX, y + 10);
   
   doc.setFontSize(12);
   doc.setFont(undefined, 'normal');
-  doc.text('RELATÓRIO TÉCNICO - ÍNDICE DE COBERTURA (ICS)', titleX, y + 19);
+  doc.text('RELATÓRIO TÉCNICO - ÍNDICE DE COBERTURA (ICS)', titleX, y + 17);
 
   y += 22; // Avança Y
 
@@ -915,6 +917,63 @@ function exportarPDF() {
 
     y += rowTabH;
   });
+  
+  // ==========================================
+  // CROQUI / FOTO DA ÁREA (NOVA SEÇÃO)
+  // ==========================================
+  if (window.imagemCroquiBase64) {
+    if (y > 230) { // Se não couber na página atual
+      doc.addPage();
+      y = 20;
+    } else {
+      y += 10;
+    }
+    
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'bold');
+    doc.text('REGISTRO FOTOGRÁFICO / CROQUI:', mLeft, y);
+    y += 5;
+    
+    try {
+      // Adiciona imagem preservando aspect ratio, max width 100mm, max height 80mm
+      const imgProps = doc.getImageProperties(window.imagemCroquiBase64);
+      const maxW = 160;
+      const maxH = 90;
+      let w = imgProps.width;
+      let h = imgProps.height;
+      const ratio = h / w;
+      
+      // Ajusta largura se passar do maxW
+      const pdfW = maxW;
+      const pdfH = pdfW * ratio;
+      
+      let finalW = pdfW;
+      let finalH = pdfH;
+      
+      if (finalH > maxH) {
+         finalH = maxH;
+         finalW = finalH / ratio;
+      }
+
+      // Verifica quebra de página se a imagem não couber no restante
+      if (y + finalH > 280) {
+        doc.addPage();
+        y = 20;
+        doc.text('REGISTRO FOTOGRÁFICO / CROQUI (Cont.):', mLeft, y);
+        y += 5;
+      }
+      
+      doc.addImage(window.imagemCroquiBase64, 'JPEG', mLeft, y, finalW, finalH);
+      y += finalH + 5;
+    } catch(err) {
+      console.warn('Erro ao inserir croqui:', err);
+      doc.setFontSize(9);
+      doc.setTextColor(200, 0, 0);
+      doc.text('[Erro ao inserir imagem do croqui]', mLeft, y + 5);
+      doc.setTextColor(0);
+      y += 10;
+    }
+  }
 
   // ==========================================
   // TEXTO LATERAL DIREITO (Marca d'água vertical)
@@ -923,12 +982,10 @@ function exportarPDF() {
   for (let p = 1; p <= pageCount; p++) {
     doc.setPage(p);
     doc.saveGraphicsState();
-    doc.setFontSize(8);
-    doc.setTextColor(150);
-    // Texto na margem direita, rotacionado, recuado para evitar corte (207 -> 200)
-    doc.text('ICS ANALYZER - MÉTODO VISUAL PATENT', 200, 200, { angle: 90, align: 'center' });
     
     // Rodapé Padrão
+    doc.setFontSize(8);
+    doc.setTextColor(150);
     doc.text(`Página ${p} de ${pageCount} - Gerado em ${new Date().toLocaleDateString()}`, 105, 292, { align: 'center', angle: 0 });
     doc.restoreGraphicsState();
   }
@@ -1025,6 +1082,34 @@ window.addEventListener('load', () => {
   if (btnCalcular) btnCalcular.addEventListener('click', calcular);
   if (btnExportar) btnExportar.addEventListener('click', exportarPDF);
   if (btnLimpar) btnLimpar.addEventListener('click', limpar);
+
+  // Preview da imagem do croqui
+  const inputCroqui = document.getElementById('inputCroqui');
+  const previewCroqui = document.getElementById('previewCroqui');
+  
+  if (inputCroqui) {
+    inputCroqui.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          if (previewCroqui) {
+            previewCroqui.src = evt.target.result;
+            previewCroqui.style.display = 'block';
+          }
+          // Guarda base64 globalmente para usar no PDF
+          window.imagemCroquiBase64 = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+      } else {
+        if (previewCroqui) {
+          previewCroqui.src = '';
+          previewCroqui.style.display = 'none';
+        }
+        window.imagemCroquiBase64 = null;
+      }
+    });
+  }
 
   setupLeituras();
   setupCampoCalibracao();
