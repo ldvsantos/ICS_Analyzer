@@ -622,10 +622,26 @@ function exportarPDF() {
   if (logoImg) {
     try {
       if (logoImg.complete && logoImg.naturalHeight > 0) {
-        const logoW = 30; // Largura em mm
+        // Ajuste de Logo: Limitar altura e largura
+        const maxW = 30;
+        const maxH = 25; // Altura máxima para não invadir a linha
+
+        let logoW = maxW;
         const ratio = logoImg.naturalHeight / logoImg.naturalWidth;
-        const logoH = logoW * ratio;
-        doc.addImage(logoImg, 'PNG', mLeft, y, logoW, logoH);
+        let logoH = logoW * ratio;
+
+        // Se altura estourar, redimensiona pela altura
+        if (logoH > maxH) {
+          logoH = maxH;
+          logoW = logoH / ratio;
+        }
+
+        // Centralizar verticalmente no espaço reservado de 30mm
+        // Espaço Header = 30mm. Meio = 15mm.
+        // Posição Y = y + (30 - logoH)/2
+        const logoY = y + (30 - logoH) / 2;
+
+        doc.addImage(logoImg, 'PNG', mLeft, logoY, logoW, logoH);
         logoAdicionado = true;
       } else {
         console.warn('Logo existe mas não está carregado (complete=false).');
@@ -640,25 +656,23 @@ function exportarPDF() {
     doc.setFontSize(22);
     doc.setFont(undefined, 'bold');
     doc.setTextColor(40, 40, 40);
-    doc.text('ICS', mLeft, y + 10);
+    doc.text('ICS', mLeft, y + 15);
     doc.setFontSize(10);
-    doc.text('Analyzer', mLeft, y + 15);
+    doc.text('Analyzer', mLeft, y + 20);
   }
 
   // Título Principal (Direita/Centro)
   const titleX = mLeft + 40;
   doc.setFontSize(16);
   doc.setFont(undefined, 'bold');
-  // Ajustado Y para alinhar melhor com o logo (centro ~10mm + meio logoH)
-  // Assumindo logoH ~15-20mm (logoW=30, ratio ~0.5-0.7)
-  // Vamos tentar alinhar com o topo do logo + um pouco
-  doc.text('SISTEMA DE ANÁLISE DE COBERTURA DE SOLO', titleX, y + 10);
+  // Ajustado Y para centralizar melhor no bloco aumentado
+  doc.text('SISTEMA DE ANÁLISE DE COBERTURA DE SOLO', titleX, y + 12);
   
   doc.setFontSize(12);
   doc.setFont(undefined, 'normal');
-  doc.text('RELATÓRIO TÉCNICO - ÍNDICE DE COBERTURA (ICS)', titleX, y + 17);
+  doc.text('RELATÓRIO TÉCNICO - ÍNDICE DE COBERTURA (ICS)', titleX, y + 20);
 
-  y += 22; // Avança Y
+  y += 32; // Espaço aumentado para cabeçalho (era 22) para evitar sobreposição
 
   // Linha grossa separadora
   doc.setLineWidth(0.5);
