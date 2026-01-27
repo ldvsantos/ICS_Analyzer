@@ -327,8 +327,12 @@ function desenharAreaChartICS(doc, x, y, w, h, valores, theme) {
   doc.setTextColor(50);
 
   // Eixo Y: um pouco menor e mais próximo do eixo
+  const yAxisLabel = 'Indice de Cobertura do Solo ICS (%)';
   doc.setFontSize(7);
-  doc.text('Indice de Cobertura do Solo ICS (%)', plotX - 3, plotY + plotH / 2, { angle: 90, align: 'center' });
+  // jsPDF: com rotação, o alinhamento pode ficar “estranho”; centraliza manualmente.
+  // getTextWidth retorna largura em mm para o fontSize atual.
+  const yAxisLabelLen = doc.getTextWidth(yAxisLabel);
+  doc.text(yAxisLabel, plotX - 8, plotY + (plotH / 2) + (yAxisLabelLen / 2), { angle: 90, align: 'left' });
 
   // Eixo X
   doc.setFontSize(8);
@@ -343,19 +347,29 @@ function setupCampoCalibracao() {
   const modo = modoEl?.value ?? '';
   const retangular = modo === 'retangular';
 
-  if (grpLargura) grpLargura.classList.toggle('hidden', !retangular);
-  if (grpAltura) grpAltura.classList.toggle('hidden', !retangular);
+  // Mantém os campos visíveis para permitir que o usuário preencha W/H mesmo sem
+  // selecionar a geometria (o cálculo assume retangular se W/H forem informados).
+  if (grpLargura) grpLargura.classList.remove('hidden');
+  if (grpAltura) grpAltura.classList.remove('hidden');
 }
 
 function calcularAreaCampo() {
   const modoEl = document.getElementById('campoModo');
-  const modo = modoEl?.value ?? '';
+  const modoSelecionado = modoEl?.value ?? '';
 
   const larguraRaw = document.getElementById('campoLargura')?.value ?? '';
   const alturaRaw = document.getElementById('campoAltura')?.value ?? '';
 
-  const largura = larguraRaw === '' ? NaN : parseFloat(larguraRaw);
-  const altura = alturaRaw === '' ? NaN : parseFloat(alturaRaw);
+  // Aceita decimal com vírgula (padrão pt-BR)
+  const norm = (s) => String(s).trim().replace(',', '.');
+  const larguraNorm = norm(larguraRaw);
+  const alturaNorm = norm(alturaRaw);
+
+  const largura = larguraNorm === '' ? NaN : parseFloat(larguraNorm);
+  const altura = alturaNorm === '' ? NaN : parseFloat(alturaNorm);
+
+  // Se W/H forem informados, assume retangular mesmo que o select esteja vazio.
+  const modo = modoSelecionado || ((larguraRaw !== '' || alturaRaw !== '') ? 'retangular' : '');
 
   const algumDado = modo !== '' || larguraRaw !== '' || alturaRaw !== '';
   if (!algumDado) return { areaCampo: null, modo: '', largura: null, altura: null };
@@ -833,7 +847,19 @@ function exportarPDF() {
   const colGenW = contentW / 4;
   
   // Fundo cinza nos labels? Vamos fazer estilo "Label: Valor" em caixa
-  function drawGenBox(label, value, idx) {
+  function fitTextToWidth(text, maxW, ellipsis = '…') {
+    const raw = String(text ?? '');
+    if (raw === '') return '';
+    if (doc.getTextWidth(raw) <= maxW) return raw;
+
+    let t = raw;
+    while (t.length > 0 && doc.getTextWidth(t + ellipsis) > maxW) {
+      t = t.slice(0, -1);
+    }
+    return t.length > 0 ? (t + ellipsis) : '';
+  }
+
+  function drawGenBox(label, value, idx, opts = {}) {
     const bx = mLeft + idx * colGenW;
     
     // Fundo cinza claro no label
@@ -843,8 +869,9 @@ function exportarPDF() {
     // A imagem: "No. ambientes (label) | 7 (valor) | Area (label) | 208 (valor)"
     // Vamos replicar: Label (cinza) | Valor (branco)
     
-    const labelPartW = colGenW * 0.6;
-    const valPartW = colGenW * 0.4;
+    const labelRatio = typeof opts.labelRatio === 'number' ? opts.labelRatio : 0.6;
+    const labelPartW = colGenW * labelRatio;
+    const valPartW = colGenW - labelPartW;
     
     doc.setFillColor(220); // Cinza label
     doc.rect(bx, y, labelPartW, rowGenH, 'F');
@@ -854,13 +881,19 @@ function exportarPDF() {
     doc.rect(bx + labelPartW, y, valPartW, rowGenH, 'F');
     doc.rect(bx + labelPartW, y, valPartW, rowGenH); // Borda valor
 
-    doc.setFontSize(8);
+    const labelFontSize = typeof opts.labelFontSize === 'number' ? opts.labelFontSize : 8;
+    const valueFontSize = typeof opts.valueFontSize === 'number' ? opts.valueFontSize : 8;
+
+    doc.setFontSize(labelFontSize);
     doc.setFont(undefined, 'bold');
     doc.setTextColor(0);
-    doc.text(label, bx + 2, y + 5);
+    const labelTxt = fitTextToWidth(label, labelPartW - 4);
+    doc.text(labelTxt, bx + 2, y + 5);
 
+    doc.setFontSize(valueFontSize);
     doc.setFont(undefined, 'normal');
-    doc.text(String(value), bx + labelPartW + 2, y + 5);
+    const valueTxt = fitTextToWidth(String(value), valPartW - 4);
+    doc.text(valueTxt, bx + labelPartW + 2, y + 5);
   }
 
   drawGenBox('No. Leituras', d.numLeituras, 0);
@@ -869,6 +902,36 @@ function exportarPDF() {
   drawGenBox('Desvio Padrão', d.desvio.toFixed(2), 3);
 
   y += rowGenH + 5;
+
+  // Mesmos dados exibidos no site (Resultados)
+  const cvTxt = (typeof d.cv === 'number') ? `${d.cv.toFixed(1)}%` : '-';
+  const ampTxt = (typeof d.amplitude === 'number') ? d.amplitude.toFixed(3) : '-';
+  const minTxt = (typeof d.minimo === 'number') ? d.minimo.toFixed(3) : '-';
+  const maxTxt = (typeof d.maximo === 'number') ? d.maximo.toFixed(3) : '-';
+  const classeTxt = (d.classe ?? '-') + (d.classeDesc ? ` - ${d.classeDesc}` : '');
+
+  // Linha 2: CV, Classe, Amplitude, (Min..Max)
+  drawGenBox('CV (%)', cvTxt, 0);
+  drawGenBox('Classificação', classeTxt, 1, { labelRatio: 0.68, labelFontSize: 7, valueFontSize: 7 });
+  drawGenBox('Amplitude', ampTxt, 2);
+  drawGenBox('Min..Max', `${minTxt}..${maxTxt}`, 3, { labelRatio: 0.62, labelFontSize: 7, valueFontSize: 7 });
+
+  y += rowGenH + 5;
+
+  // Linha extra (opcional): Áreas em m² quando houver calibração W/H
+  if (typeof d.areaCampo === 'number') {
+    const areaMediaTxt = typeof d.areaCobertaMedia === 'number' ? d.areaCobertaMedia.toFixed(2) : '-';
+    const areaTotalTxt = typeof d.areaCobertaTotal === 'number' ? d.areaCobertaTotal.toFixed(2) : '-';
+    const areaCampoTxt = d.areaCampo.toFixed(2);
+
+    // Labels longos: usar fonte menor e dar mais largura para o label.
+    const areaBoxOpts = { labelRatio: 0.72, labelFontSize: 7, valueFontSize: 7 };
+    drawGenBox('A campo (m²)', areaCampoTxt, 0, areaBoxOpts);
+    drawGenBox('Área cob. média (m²)', areaMediaTxt, 1, areaBoxOpts);
+    drawGenBox('Área cob. total (m²)', areaTotalTxt, 2, areaBoxOpts);
+    drawGenBox('Dist. visada (m)', d.distVisada || '-', 3, areaBoxOpts);
+    y += rowGenH + 5;
+  }
 
   // ==========================================
   // 4. "DISTRIBUIÇÃO POR CLASSES" (Estilo tabela de sistemas)
@@ -880,55 +943,54 @@ function exportarPDF() {
   doc.line(mLeft, y + 1, pageW - mRight, y + 1);
   y += 2;
 
-  // Calcular contagens
-  const bins = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
+  // Calcular contagens (mesmo critério usado no sistema)
   const labels = ['0.0', '0.2', '0.4', '0.6', '0.8', '1.0'];
   const counts = [0, 0, 0, 0, 0, 0];
-  const areas = [0, 0, 0, 0, 0, 0]; // Se tivesse área m2
-  
-  d.leituras.forEach(v => {
-    // Encontrar bin mais próximo
-    let bestIdx = 0;
-    let minDiff = Infinity;
-    bins.forEach((b, i) => {
-      const diff = Math.abs(v - b);
-      if (diff < minDiff) { minDiff = diff; bestIdx = i; }
-    });
-    counts[bestIdx]++;
-  });
-
   const total = d.numLeituras;
-  
-  // Desenhar Grid de 6 colunas
-  const blkH = 15;
-  const blkW = contentW / 6;
 
-  labels.forEach((lab, i) => {
-    const bx = mLeft + i * blkW;
-    
-    // Header (Nome da classe) com fundo cinza
-    doc.setFillColor(220);
-    doc.rect(bx, y, blkW, 6, 'F');
-    doc.setDrawColor(0);
-    doc.setLineWidth(0.2);
-    doc.rect(bx, y, blkW, 6); // Borda
-
-    doc.setFontSize(8);
-    doc.setFont(undefined, 'bold');
-    doc.text(lab, bx + blkW/2, y + 4, { align: 'center' });
-
-    // Corpo (Contagem e %)
-    // Linha 1: Contagem
-    doc.rect(bx, y + 6, blkW, 9); // Borda corpo
-    
-    doc.setFont(undefined, 'normal');
-    const pct = ((counts[i] / total) * 100).toFixed(1) + '%';
-    
-    doc.text(`N: ${counts[i]}`, bx + 2, y + 10);
-    doc.text(`Pct: ${pct}`, bx + 2, y + 13.5);
+  (d.leituras || []).forEach((val) => {
+    if (val < 0.1) counts[0]++;
+    else if (val < 0.3) counts[1]++;
+    else if (val < 0.5) counts[2]++;
+    else if (val < 0.7) counts[3]++;
+    else if (val < 0.9) counts[4]++;
+    else counts[5]++;
   });
 
-  y += blkH + 10;
+  // Tabela simples: Classe | N | Pct
+  const freqTableW = 120;
+  const freqTableX = (pageW - freqTableW) / 2;
+  const freqRowH = 7;
+  const colC = 30;
+  const colN = 30;
+  const colP = freqTableW - (colC + colN);
+
+  doc.setFontSize(8);
+  doc.setFont(undefined, 'bold');
+  doc.setFillColor(220);
+  doc.rect(freqTableX, y, freqTableW, freqRowH, 'F');
+  doc.setDrawColor(0);
+  doc.setLineWidth(0.2);
+  doc.rect(freqTableX, y, freqTableW, freqRowH);
+  doc.text('Classe', freqTableX + 2, y + 5);
+  doc.text('N', freqTableX + colC + 2, y + 5);
+  doc.text('Pct', freqTableX + colC + colN + 2, y + 5);
+  y += freqRowH;
+
+  doc.setFont(undefined, 'normal');
+  labels.forEach((lab, i) => {
+    doc.rect(freqTableX, y, freqTableW, freqRowH);
+    doc.line(freqTableX + colC, y, freqTableX + colC, y + freqRowH);
+    doc.line(freqTableX + colC + colN, y, freqTableX + colC + colN, y + freqRowH);
+
+    const pct = total > 0 ? ((counts[i] / total) * 100).toFixed(1) + '%' : '0.0%';
+    doc.text(lab, freqTableX + 2, y + 5);
+    doc.text(String(counts[i]), freqTableX + colC + 2, y + 5);
+    doc.text(pct, freqTableX + colC + colN + 2, y + 5);
+    y += freqRowH;
+  });
+
+  y += 8;
 
   // ==========================================
   // 5. GRÁFICO (Centralizado)
@@ -968,73 +1030,9 @@ function exportarPDF() {
   y += chartInfo.h + 10;
 
   // ==========================================
-  // 6. DETALHAMENTO DAS LEITURAS (Tabela Longa)
+  // 6. (REMOVIDO) DETALHAMENTO TABULAR
   // ==========================================
-  // Se houver espaço, começa aqui. Se não, nova página.
-  if (y + 20 > 280) {
-    doc.addPage();
-    y = 20;
-  }
-
-  doc.setFontSize(10);
-  doc.setFont(undefined, 'bold');
-  doc.text('DETALHAMENTO TABULAR', mLeft + contentW/2, y, { align: 'center' });
-  doc.line(mLeft, y + 1, pageW - mRight, y + 1);
-  y += 5;
-
-  // Tabela centralizada
-  const tableW = 160; // Aumentado largura
-  const tableX = (pageW - tableW) / 2;
-  const rowTabH = 6;
-
-  // Header Tabela
-  doc.setFillColor(220);
-  doc.rect(tableX, y, tableW, rowTabH, 'F');
-  doc.rect(tableX, y, tableW, rowTabH); // Borda
-  
-  doc.setFontSize(8);
-  doc.text('#', tableX + 3, y + 4);
-  doc.text('Horiz.', tableX + 12, y + 4);
-  doc.text('Vert.', tableX + 32, y + 4);
-  doc.text('Média ICS', tableX + 52, y + 4);
-  doc.text('Classe', tableX + 85, y + 4);
-  doc.text('Descrição', tableX + 115, y + 4);
-
-  y += rowTabH;
-
-  doc.setFont(undefined, 'normal');
-
-  d.leituras.forEach((val, i) => {
-    if (y > 280) {
-      doc.addPage();
-      y = 20;
-      // Repete header se quiser, simplificando aqui
-    }
-
-    doc.rect(tableX, y, tableW, rowTabH); // Borda linha
-
-    const valH = d.leiturasH ? d.leiturasH[i] : '-';
-    const valV = d.leiturasV ? d.leiturasV[i] : '-';
-
-    let classeLeitura, descLeitura;
-    if (val < 0.1) { classeLeitura='0.0'; descLeitura='Solo Exposto'; }
-    else if (val < 0.3) { classeLeitura='0.2'; descLeitura='Baixa'; }
-    else if (val < 0.5) { classeLeitura='0.4'; descLeitura='Média-Baixa'; }
-    else if (val < 0.7) { classeLeitura='0.6'; descLeitura='Média-Alta'; }
-    else if (val < 0.9) { classeLeitura='0.8'; descLeitura='Alta'; }
-    else { classeLeitura='1.0'; descLeitura='Total'; }
-
-    doc.text(String(i + 1), tableX + 3, y + 4);
-    doc.text(typeof valH === 'number' ? valH.toFixed(2) : valH, tableX + 12, y + 4);
-    doc.text(typeof valV === 'number' ? valV.toFixed(2) : valV, tableX + 32, y + 4);
-    doc.setFont(undefined, 'bold');
-    doc.text(val.toFixed(2), tableX + 52, y + 4);
-    doc.setFont(undefined, 'normal');
-    doc.text(classeLeitura, tableX + 85, y + 4);
-    doc.text(descLeitura, tableX + 115, y + 4);
-
-    y += rowTabH;
-  });
+  // O detalhamento linha-a-linha foi removido para manter o PDF mais enxuto.
 
   // ==========================================
   // TEXTO LATERAL DIREITO (Marca d'água vertical)
