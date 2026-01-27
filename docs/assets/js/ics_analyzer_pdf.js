@@ -288,42 +288,6 @@ function setupCampoCalibracao() {
 function calcularAreaCampo() {
   const modoEl = document.getElementById('campoModo');
   const modo = modoEl?.value ?? '';
-      // Gráficos (estilo profissional com cores + rachuras)
-      // (Observação: 1 boxplot por conjunto de leituras da análise atual)
-      if (y > 220) {
-        doc.addPage();
-        y = 20;
-      }
-
-      doc.setFont(undefined, 'bold');
-      doc.setFontSize(11);
-      doc.text('GRÁFICOS', 15, y);
-      y += 6;
-
-      doc.setFont(undefined, 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(70);
-      doc.text('Distribuição das leituras (ICS) e frequência por classe (cores/rachuras conforme modelo).', 15, y);
-      doc.setTextColor(0);
-      y += 4;
-
-      const theme = {
-        panelHex: '#EAEAEA',
-        barAHex: '#DECBE4',
-        barBHex: '#CCEBC5',
-        boxFillHex: '#CCEBC5',
-        hatchHex: '#383838',
-        boxHatchHex: '#383838',
-      };
-
-      const chartTop = y;
-      const chartH = 58;
-      const boxW = 92;
-      const barW = 92;
-
-      desenharBoxplotICS(doc, 15, chartTop, boxW, chartH, dados.leituras, theme);
-      desenharBarrasFrequenciaICS(doc, 108, chartTop, barW, chartH, dados.leituras, theme);
-      y = chartTop + chartH + 8;
 
   const larguraRaw = document.getElementById('campoLargura')?.value ?? '';
   const alturaRaw = document.getElementById('campoAltura')?.value ?? '';
@@ -686,6 +650,43 @@ function exportarPDF() {
   });
 
   y += 3;
+
+  // Gráficos (estilo profissional com cores + rachuras)
+  // (Observação: 1 boxplot por conjunto de leituras da análise atual)
+  if (y > 220) {
+    doc.addPage();
+    y = 20;
+  }
+
+  doc.setFont(undefined, 'bold');
+  doc.setFontSize(11);
+  doc.text('GRÁFICOS', 15, y);
+  y += 6;
+
+  doc.setFont(undefined, 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(70);
+  doc.text('Distribuição das leituras (ICS) e frequência por classe (cores/rachuras conforme modelo).', 15, y);
+  doc.setTextColor(0);
+  y += 4;
+
+  const theme = {
+    panelHex: '#EAEAEA',
+    barAHex: '#DECBE4',
+    barBHex: '#CCEBC5',
+    boxFillHex: '#CCEBC5',
+    hatchHex: '#383838',
+    boxHatchHex: '#383838',
+  };
+
+  const chartTop = y;
+  const chartH = 58;
+  const boxW = 92;
+  const barW = 92;
+
+  desenharBoxplotICS(doc, 15, chartTop, boxW, chartH, dados.leituras, theme);
+  desenharBarrasFrequenciaICS(doc, 108, chartTop, barW, chartH, dados.leituras, theme);
+  y = chartTop + chartH + 8;
 
   doc.setFont(undefined, 'bold');
   doc.text('LEITURAS INDIVIDUAIS', 15, y);
