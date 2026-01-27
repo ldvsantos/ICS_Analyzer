@@ -221,7 +221,7 @@ function desenharBarrasFrequenciaICS(doc, x, y, w, h, valores, theme) {
   const hatch = hexToRgb(hatchHex);
 
   const bins = [0, 0.25, 0.5, 0.75, 1.0];
-  const labels = ['0.00', '0.25', '0.50', '0.75', '1.00'];
+  const labels = ['0%', '25%', '50%', '75%', '100%'];
   const counts = new Array(bins.length).fill(0);
   (valores || []).forEach((v) => {
     const idx = bins.findIndex((b) => Math.abs(v - b) < 1e-9);
@@ -234,11 +234,15 @@ function desenharBarrasFrequenciaICS(doc, x, y, w, h, valores, theme) {
   doc.setLineWidth(0.2);
   doc.rect(x, y, w, h, 'FD');
 
-  const pad = 7;
-  const plotX = x + pad;
-  const plotY = y + 6;
-  const plotW = w - pad * 2;
-  const plotH = h - 14;
+  // Ajustado o padding inferior para caber labels e titulo
+  const padTop = 6;
+  const padBottom = 16; 
+  const padX = 7;
+  
+  const plotX = x + padX;
+  const plotY = y + padTop;
+  const plotW = w - padX * 2;
+  const plotH = h - (padTop + padBottom);
 
   doc.setDrawColor(120);
   doc.setLineWidth(0.2);
@@ -247,11 +251,12 @@ function desenharBarrasFrequenciaICS(doc, x, y, w, h, valores, theme) {
   const barGap = 2.2;
   const barW = (plotW - barGap * (labels.length - 1)) / labels.length;
 
-  doc.setFontSize(7);
+  doc.setFontSize(8); // Fonte um pouco maior
   doc.setTextColor(60);
+  
   labels.forEach((lab, i) => {
     const bx = plotX + i * (barW + barGap);
-    const bh = (counts[i] / maxCount) * (plotH - 2);
+    const bh = (counts[i] / maxCount) * (plotH); 
     const by = plotY + plotH - bh;
     const fill = i % 2 === 0 ? barA : barB;
     
@@ -262,12 +267,15 @@ function desenharBarrasFrequenciaICS(doc, x, y, w, h, valores, theme) {
     doc.setDrawColor(60);
     doc.setLineWidth(0.2);
     doc.rect(bx, by, barW, bh);
-    doc.text(lab, bx + barW / 2, plotY + plotH + 4.5, { align: 'center' });
+    
+    // Texto X (Porcentagem) - Ajustado posição Y
+    doc.text(lab, bx + barW / 2, plotY + plotH + 5, { align: 'center' });
   });
 
-  doc.setFontSize(8);
+  doc.setFontSize(9);
   doc.setTextColor(40);
-  doc.text('Frequencia (classes)', x + 6, y + h - 4);
+  // Titulo bem abaixo
+  doc.text('Classes de Cobertura (%)', x + w / 2, y + h - 5, { align: 'center' });
   doc.setTextColor(0);
 }
 
@@ -867,9 +875,8 @@ function exportarPDF() {
     doc.saveGraphicsState();
     doc.setFontSize(8);
     doc.setTextColor(150);
-    // Texto na margem direita, rotacionado
-    // x = 205 (perto da borda), y = 200 (meio vertical)
-    doc.text('ICS ANALYZER - MÉTODO VISUAL PATENT', 205, 200, { angle: 90, align: 'center' });
+    // Texto na margem direita, rotacionado, bem no canto
+    doc.text('ICS ANALYZER - MÉTODO VISUAL PATENT', 207, 200, { angle: 90, align: 'center' });
     
     // Rodapé Padrão
     doc.text(`Página ${p} de ${pageCount} - Gerado em ${new Date().toLocaleDateString()}`, 105, 292, { align: 'center', angle: 0 });
