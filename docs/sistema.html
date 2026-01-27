@@ -10,8 +10,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-  <link rel="stylesheet" href="assets/css/styles.css?v=2026-01-27-1">
-  <link rel="stylesheet" href="assets/css/mobile.css?v=2026-01-27-1" media="(max-width: 1024px)">
+  <link rel="stylesheet" href="assets/css/styles.css?v=2026-01-27-6">
+  <link rel="stylesheet" href="assets/css/mobile.css?v=2026-01-27-6" media="(max-width: 1024px)">
 </head>
 <body>
   <header class="header">
@@ -128,7 +128,7 @@
             </select>
           </div>
           <div class="form-group">
-            <label for="chuva">Precipitação recente</label>
+            <label for="chuva">Precipitação recente (&lt;24h)</label>
             <select id="chuva">
               <option value="">--Selecione--</option>
               <option value="Não">Não</option>
@@ -174,9 +174,35 @@
             <label for="climaFim">Fim do período climático</label>
             <input type="date" id="climaFim">
           </div>
-          <div class="form-group" style="grid-column: span 2;">
-            <button type="button" class="btn-secondary" id="btnBuscarClima">Buscar dados climáticos</button>
+
+          <div class="form-group">
+            <label for="usleComprimento">Comprimento de rampa (USLE, m)</label>
+            <input type="number" id="usleComprimento" min="0" step="0.1" placeholder="Ex: 30">
+            <div class="form-hint">Comprimento efetivo da encosta (m). Usado no fator LS da USLE/RUSLE.</div>
+          </div>
+          <div class="form-group">
+            <label for="uslePratica">Práticas conservacionistas (USLE, P)</label>
+            <select id="uslePratica">
+              <option value="">--Não informar--</option>
+              <option value="1.0">Sem prática (P=1.0)</option>
+              <option value="0.6">Plantio em contorno (P≈0.6)</option>
+              <option value="0.5">Faixa vegetada/barreiras (P≈0.5)</option>
+              <option value="0.3">Terraços (P≈0.3)</option>
+            </select>
+            <div class="form-hint">Valores P são aproximações operacionais. Se não informar, o módulo USLE fica indisponível.</div>
+          </div>
+
+          <div class="form-group clima-actions">
+            <label class="sr-only" for="btnBuscarClima">Ação climática</label>
+            <button type="button" class="btn-secondary btn-form" id="btnBuscarClima">Buscar dados climáticos</button>
+          </div>
+
+          <div class="form-group grid-span-2">
             <div class="form-hint">O sistema usa uma API pública para obter chuva diária e temperatura média. Se estiver offline, a etapa é ignorada e o risco usa apenas as entradas locais.</div>
+            <div id="climaStatus" class="status-inline hidden" role="status" aria-live="polite" aria-atomic="true">
+              <span id="climaSpinner" class="spinner hidden" aria-hidden="true"></span>
+              <span id="climaStatusText"></span>
+            </div>
           </div>
         </div>
       </div>
@@ -229,7 +255,7 @@
       </div>
 
       <div class="button-group">
-        <button type="button" class="btn-primary" id="btnCalcular">🔢 Calcular Resultados</button>
+        <button type="button" class="btn-primary" id="btnCalcular" onclick="safeCalcular()">🔢 Calcular Resultados</button>
         <button type="button" class="btn-success" id="btnExportarPDF">📄 Exportar como PDF</button>
         <button type="button" class="btn-secondary" id="btnLimpar">🔄 Limpar Dados</button>
       </div>
@@ -240,6 +266,11 @@
         <div class="section-title">📊 Resultados da Análise</div>
 
         <div class="result-grid">
+          <div class="result-box">
+            <div class="result-label">Classificação</div>
+            <div class="result-value" id="classe">-</div>
+            <div class="result-unit" id="classe-desc">Aguardando cálculo</div>
+          </div>
           <div class="result-box success">
             <div class="result-label">Média (ICS)</div>
             <div class="result-value" id="media">0.000</div>
@@ -251,49 +282,11 @@
             <div class="result-unit">(0-100%)</div>
           </div>
           <div class="result-box">
-            <div class="result-label">Desvio Padrão</div>
-            <div class="result-value" id="desvio">0.000</div>
-            <div class="result-unit">(σ)</div>
-          </div>
-          <div class="result-box">
-            <div class="result-label">Coeficiente de Variação</div>
-            <div class="result-value" id="cv">0.0%</div>
-            <div class="result-unit">(CV%)</div>
+            <div class="result-label">Amplitude (Range)</div>
+            <div class="result-value" id="amplitude">0.000</div>
+            <div class="result-unit">(Max-Min)</div>
           </div>
         </div>
-
-        <details class="calc-details">
-          <summary>🧮 Como foi calculado</summary>
-          <div class="calc-body">
-            <div class="calc-row">
-              <span class="calc-tag">ICS ponto</span>
-              <span>=</span>
-              <span class="calc-mono">( Horizontal + (Vertical / 2) ) / 2</span>
-            </div>
-            <div class="calc-row">
-              <span class="calc-tag">ICS̄ (Média)</span>
-              <span>=</span>
-              <span class="calc-mono">Σ ICS pontos / n</span>
-              <span>=</span>
-              <span class="calc-mono"><span id="calc-soma">0.000</span> / <span id="calc-n">0</span></span>
-              <span>=</span>
-              <span class="calc-mono"><span id="calc-ics">0.000</span></span>
-            </div>
-            <div class="calc-row">
-              <span class="calc-tag">% Cobertura</span>
-              <span>=</span>
-              <span class="calc-mono">100 × ICS̄</span>
-              <span>=</span>
-              <span class="calc-mono">100 × <span id="calc-ics2">0.000</span></span>
-              <span>=</span>
-              <span class="calc-mono"><span id="calc-pct">0.0%</span></span>
-            </div>
-            <div class="calc-row">
-              <span class="calc-tag">Equivalência (patente)</span>
-              <span class="calc-mono">Se ICSᵢ = Atᵢ/A_campo, então % = 100 × (ΣAtᵢ)/(n·A_campo) = 100 × (ΣICSᵢ)/n</span>
-            </div>
-          </div>
-        </details>
 
         <div id="area-results" class="result-grid hidden">
           <div class="result-box">
@@ -338,30 +331,43 @@
 
         <div id="risco-results" class="result-grid hidden">
           <div class="result-box">
-            <div class="result-label">Risco de erosão potencial</div>
+            <div class="result-label-row">
+              <div class="result-label">Risco de erosão potencial</div>
+              <button type="button" class="help-btn help-btn-mini" id="btnAjudaRisco" aria-haspopup="dialog" aria-controls="riscoModal">
+                <span class="help-icon">?</span>
+                Entenda
+              </button>
+            </div>
             <div class="result-value" id="risco-score">0</div>
             <div class="result-unit" id="risco-classe">Aguardando cálculo</div>
+          </div>
+          <div class="result-box">
+            <div class="result-label-row">
+              <div class="result-label">USLE (estimativa)</div>
+              <button type="button" class="help-btn help-btn-mini" id="btnAjudaUSLE" aria-haspopup="dialog" aria-controls="usleModal">
+                <span class="help-icon">?</span>
+                Entenda
+              </button>
+            </div>
+            <div class="result-value" id="usle-perda">-</div>
+            <div class="result-unit" id="usle-desc">t/ha (período climático)</div>
           </div>
           <div class="result-box">
             <div class="result-label">Exposição estimada</div>
             <div class="result-value" id="exposicao">0.0%</div>
             <div class="result-unit">(1 − ICS̄)</div>
           </div>
-          <div class="result-box">
-            <div class="result-label">Declividade informada</div>
-            <div class="result-value" id="risco-declividade">-</div>
-            <div class="result-unit">%</div>
-          </div>
-          <div class="result-box">
-            <div class="result-label">Textura informada</div>
-            <div class="result-value" id="risco-textura">-</div>
-            <div class="result-unit">classe</div>
-          </div>
         </div>
 
         <div id="sust-results" class="result-grid hidden">
           <div class="result-box success">
-            <div class="result-label">Indicador composto (monitoramento)</div>
+            <div class="result-label-row">
+              <div class="result-label">Indicador composto (monitoramento)</div>
+              <button type="button" class="help-btn help-btn-mini" id="btnAjudaIMC" aria-haspopup="dialog" aria-controls="imcModal">
+                <span class="help-icon">?</span>
+                Entenda
+              </button>
+            </div>
             <div class="result-value" id="imc">0</div>
             <div class="result-unit" id="imc-desc">Aguardando cálculo</div>
           </div>
@@ -371,28 +377,30 @@
             <div class="result-unit">m²</div>
           </div>
           <div class="result-box">
-            <div class="result-label">Estabilidade espacial (CV)</div>
+            <div class="result-label-row">
+              <div class="result-label">Estabilidade espacial (CV)</div>
+              <button type="button" class="help-btn help-btn-mini" id="btnAjudaCV" aria-haspopup="dialog" aria-controls="cvModal">
+                <span class="help-icon">?</span>
+                Entenda
+              </button>
+            </div>
             <div class="result-value" id="imc-cv">0.0%</div>
             <div class="result-unit">(quanto menor, melhor)</div>
           </div>
           <div class="result-box">
-            <div class="result-label">Variabilidade (Range)</div>
+            <div class="result-label-row">
+              <div class="result-label">Variabilidade (Range)</div>
+              <button type="button" class="help-btn help-btn-mini" id="btnAjudaRange" aria-haspopup="dialog" aria-controls="rangeModal">
+                <span class="help-icon">?</span>
+                Entenda
+              </button>
+            </div>
             <div class="result-value" id="imc-range">0.000</div>
             <div class="result-unit">(quanto menor, melhor)</div>
           </div>
         </div>
 
         <div class="result-grid">
-          <div class="result-box">
-            <div class="result-label">Classificação</div>
-            <div class="result-value" id="classe">-</div>
-            <div class="result-unit" id="classe-desc">Aguardando cálculo</div>
-          </div>
-          <div class="result-box">
-            <div class="result-label">Amplitude (Range)</div>
-            <div class="result-value" id="amplitude">0.000</div>
-            <div class="result-unit">(Max-Min)</div>
-          </div>
           <div class="result-box">
             <div class="result-label">Valor Mínimo</div>
             <div class="result-value" id="minimo">0.000</div>
@@ -414,6 +422,39 @@
           </thead>
           <tbody id="readings-table-body"></tbody>
         </table>
+
+        <details class="calc-details">
+          <summary>🧮 Como foi calculado</summary>
+          <div class="calc-body">
+            <div class="calc-row">
+              <span class="calc-tag">ICS ponto</span>
+              <span>=</span>
+              <span class="calc-mono">( Horizontal + (Vertical / 2) ) / 2</span>
+            </div>
+            <div class="calc-row">
+              <span class="calc-tag">ICS̄ (Média)</span>
+              <span>=</span>
+              <span class="calc-mono">Σ ICS pontos / n</span>
+              <span>=</span>
+              <span class="calc-mono"><span id="calc-soma">0.000</span> / <span id="calc-n">0</span></span>
+              <span>=</span>
+              <span class="calc-mono"><span id="calc-ics">0.000</span></span>
+            </div>
+            <div class="calc-row">
+              <span class="calc-tag">% Cobertura</span>
+              <span>=</span>
+              <span class="calc-mono">100 × ICS̄</span>
+              <span>=</span>
+              <span class="calc-mono">100 × <span id="calc-ics2">0.000</span></span>
+              <span>=</span>
+              <span class="calc-mono"><span id="calc-pct">0.0%</span></span>
+            </div>
+            <div class="calc-row">
+              <span class="calc-tag">Equivalência (patente)</span>
+              <span class="calc-mono">Se ICSᵢ = Atᵢ/A_campo, então % = 100 × (ΣAtᵢ)/(n·A_campo) = 100 × (ΣICSᵢ)/n</span>
+            </div>
+          </div>
+        </details>
       </div>
     </main>
 
@@ -466,6 +507,97 @@
     </div>
   </div>
 
-  <script src="assets/js/ics_analyzer_pdf.js" defer></script>
+  <div class="modal-backdrop" id="riscoModal" role="dialog" aria-modal="true" aria-labelledby="riscoTitulo" aria-hidden="true">
+    <div class="modal" role="document">
+      <div class="modal-header">
+        <h3 id="riscoTitulo">Como interpretar o “Risco de erosão potencial”</h3>
+        <button class="modal-close" id="btnFecharRisco" type="button">Fechar</button>
+      </div>
+      <div class="modal-body">
+        <p><strong>O que é:</strong> uma <strong>pontuação (0 a 100)</strong> que resume, de forma comparativa, a sensibilidade potencial do local à erosão por splash/enxurrada.</p>
+        <p><strong>Importante:</strong> não é “% de chance” nem uma taxa física; é um <strong>índice/nota</strong> para priorização e monitoramento.</p>
+
+        <p><strong>Como ler o número:</strong></p>
+        <ul>
+          <li><strong>0–32:</strong> Baixo</li>
+          <li><strong>33–65:</strong> Médio</li>
+          <li><strong>66–100:</strong> Alto</li>
+        </ul>
+
+        <p><strong>O que influencia (resumo):</strong> o sistema combina (i) chuva recente (preferencialmente a chuva dos últimos 30 dias via API, quando disponível), (ii) exposição estimada (<span class="calc-mono">1 − ICS̄</span>), (iii) declividade e (iv) textura (proxy simples). Eventos de chuva diária muito alta podem aumentar levemente a pontuação.</p>
+        <p><strong>Interpretação prática:</strong> valores maiores sugerem priorizar reforço de cobertura, dissipação do escoamento superficial e microconservação (ex.: barreiras, nivelamento, manejo de resíduo/cobertura).</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="imcModal" role="dialog" aria-modal="true" aria-labelledby="imcTitulo" aria-hidden="true">
+    <div class="modal" role="document">
+      <div class="modal-header">
+        <h3 id="imcTitulo">Como interpretar o “Indicador composto (monitoramento)”</h3>
+        <button class="modal-close" id="btnFecharIMC" type="button">Fechar</button>
+      </div>
+      <div class="modal-body">
+        <p><strong>O que é:</strong> uma <strong>pontuação (0 a 100)</strong> para monitoramento, onde <strong>maior é melhor</strong> (mais cobertura e distribuição mais estável entre as leituras).</p>
+        <p><strong>Importante:</strong> não é porcentagem direta; é um <strong>índice/nota</strong> para comparar áreas/tempos.</p>
+
+        <p><strong>Como ler o número:</strong></p>
+        <ul>
+          <li><strong>80–100:</strong> Ótimo</li>
+          <li><strong>60–79:</strong> Bom</li>
+          <li><strong>40–59:</strong> Atenção</li>
+          <li><strong>0–39:</strong> Crítico</li>
+        </ul>
+
+        <p><strong>O que influencia (resumo):</strong> o indicador dá mais peso à <strong>cobertura média (ICS̄)</strong> e complementa com estabilidade espacial (CV) e variabilidade (Range). Em geral, uma área pode ter ICS̄ razoável, mas ainda assim ter nota pior se a distribuição estiver muito irregular (hotspots de solo exposto).</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="cvModal" role="dialog" aria-modal="true" aria-labelledby="cvTitulo" aria-hidden="true">
+    <div class="modal" role="document">
+      <div class="modal-header">
+        <h3 id="cvTitulo">Estabilidade espacial (CV): como interpretar</h3>
+        <button class="modal-close" id="btnFecharCV" type="button">Fechar</button>
+      </div>
+      <div class="modal-body">
+        <p><strong>O que é:</strong> o <strong>Coeficiente de Variação (CV)</strong> das leituras de ICS. Mede o quanto as leituras variam em relação à média.</p>
+        <p><strong>Unidade:</strong> é apresentado em <strong>%</strong>, mas aqui você deve interpretar como <strong>métrica de dispersão</strong> (não é “% de cobertura”).</p>
+        <p><strong>Como ler:</strong> <strong>quanto menor o CV, mais homogênea</strong> é a cobertura no campo visual entre os pontos amostrados. CV alto sugere hotspots de solo exposto (ou cobertura muito irregular), mesmo que a média não seja tão baixa.</p>
+        <p><strong>Uso no indicador composto:</strong> o CV entra como penalização: valores altos diminuem a pontuação do monitoramento.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="rangeModal" role="dialog" aria-modal="true" aria-labelledby="rangeTitulo" aria-hidden="true">
+    <div class="modal" role="document">
+      <div class="modal-header">
+        <h3 id="rangeTitulo">Variabilidade (Range): como interpretar</h3>
+        <button class="modal-close" id="btnFecharRange" type="button">Fechar</button>
+      </div>
+      <div class="modal-body">
+        <p><strong>O que é:</strong> a <strong>amplitude (Range)</strong> das leituras de ICS, calculada como <span class="calc-mono">Max − Min</span>.</p>
+        <p><strong>Escala:</strong> varia de <strong>0 a 1</strong> (pois as leituras de ICS estão entre 0 e 1). Ex.: Range 0,60 indica uma diferença grande entre o ponto mais coberto e o mais exposto.</p>
+        <p><strong>Como ler:</strong> <strong>quanto menor o Range, mais consistente</strong> é o padrão de cobertura no conjunto de leituras. Range alto sugere alternância forte entre pontos com boa cobertura e pontos muito expostos.</p>
+        <p><strong>Uso no indicador composto:</strong> o Range também entra como penalização: variabilidade alta reduz a nota de monitoramento.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="usleModal" role="dialog" aria-modal="true" aria-labelledby="usleTitulo" aria-hidden="true">
+    <div class="modal" role="document">
+      <div class="modal-header">
+        <h3 id="usleTitulo">USLE (estimativa): como interpretar</h3>
+        <button class="modal-close" id="btnFecharUSLE" type="button">Fechar</button>
+      </div>
+      <div class="modal-body">
+        <p><strong>O que é:</strong> uma <strong>estimativa de perda de solo</strong> baseada na forma da USLE/RUSLE (<span class="calc-mono">A = R·K·LS·C·P</span>), expressa aqui como <strong>t/ha no período climático</strong> informado.</p>
+        <p><strong>Atenção:</strong> este módulo usa <strong>aproximações</strong> (principalmente para <strong>R</strong>, pois não há EI30). Use para <strong>comparação e triagem</strong>, não como valor absoluto para laudo.</p>
+        <p><strong>Entradas necessárias:</strong> chuva diária do período (API), declividade (%), textura (classe), comprimento de rampa (m) e prática P.</p>
+        <p><strong>Interpretação prática:</strong> valores maiores sugerem maior potencial de perda de solo no período e reforçam a necessidade de práticas conservacionistas e aumento de cobertura.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/ics_analyzer_pdf.js?v=2026-01-27-6" defer></script>
 </body>
 </html>

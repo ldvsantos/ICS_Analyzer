@@ -53,6 +53,39 @@ function mostrarMensagem(texto, tipo) {
   setTimeout(() => msg.classList.add('hidden'), 5000);
 }
 
+function safeCalcular() {
+  try {
+    // Garante que as leituras existam (caso algum listener de inicialização não tenha rodado)
+    if (!document.getElementById('leitura1H') || !document.getElementById('leitura1V')) {
+      setupLeituras();
+    }
+    calcular();
+  } catch (err) {
+    console.error('Erro no cálculo:', err);
+    mostrarMensagem(`Erro interno ao calcular: ${err?.message || err}`, 'error');
+  }
+}
+
+function setClimaStatus(texto, opts = {}) {
+  const box = document.getElementById('climaStatus');
+  const textEl = document.getElementById('climaStatusText');
+  const spinner = document.getElementById('climaSpinner');
+
+  if (!box || !textEl || !spinner) return;
+
+  const { type = 'info', loading = false, show = true } = opts;
+
+  textEl.textContent = String(texto ?? '');
+  spinner.classList.toggle('hidden', !loading);
+  box.classList.remove('status-info', 'status-success', 'status-error');
+  box.classList.add(`status-${type}`);
+  box.classList.toggle('hidden', !show);
+}
+
+function clearClimaStatus() {
+  setClimaStatus('', { show: false, loading: false });
+}
+
 function hexToRgb(hex) {
   const clean = String(hex).replace('#', '').trim();
   if (clean.length !== 6) return { r: 0, g: 0, b: 0 };
@@ -420,6 +453,41 @@ function textureToKNorm(textura) {
   return null;
 }
 
+function textureToKUsle(textura) {
+  const t = String(textura ?? '').toLowerCase();
+  // Aproximações operacionais (ordem de grandeza). Não usar como laudo.
+  if (t === 'arenosa') return 0.05;
+  if (t === 'media') return 0.03;
+  if (t === 'argilosa') return 0.02;
+  return null;
+}
+
+function estimateLSRUSLE(declividadePct, comprimentoM) {
+  const slopePct = Number(declividadePct);
+  const lengthM = Number(comprimentoM);
+  if (!Number.isFinite(slopePct) || !Number.isFinite(lengthM) || lengthM <= 0) return null;
+
+  const s = slopePct / 100;
+  const theta = Math.atan(s);
+  const sinTheta = Math.sin(theta);
+
+  const beta = (sinTheta / 0.0896) / (3 * Math.pow(sinTheta, 0.8) + 0.56);
+  const m = beta / (1 + beta);
+  const L = Math.pow(lengthM / 22.13, m);
+  const S = slopePct < 9 ? (10.8 * sinTheta + 0.03) : (16.8 * sinTheta - 0.50);
+  return L * S;
+}
+
+function estimateRProxyFromPrecipDaily(precipDailyMm) {
+  const arr = (precipDailyMm || []).filter((v) => Number.isFinite(v) && v > 0);
+  if (arr.length === 0) return 0;
+  let sum = 0;
+  for (const mm of arr) sum += Math.pow(mm, 1.5);
+  // Escala escolhida para gerar números em ordem de grandeza útil no app.
+  // É um proxy (sem EI30) — interpretação no modal.
+  return sum * 100;
+}
+
 function classificarRisco(score) {
   if (!Number.isFinite(score)) return { classe: 'Indisponível', desc: 'Sem dados suficientes' };
   if (score < 33) return { classe: 'Baixo', desc: 'Condição estrutural mais resiliente para a energia do evento' };
@@ -515,6 +583,26 @@ function calcularIndicadoresAvancados(d) {
     return partsTxt.join(' | ');
   })();
 
+  // USLE/RUSLE (estimativa): A = R * K * LS * C * P
+  const usleComprimentoM = Number.isFinite(d.usleComprimentoM) ? d.usleComprimentoM : parseNumberPtBr(d.usleComprimentoM);
+  const usleP = Number.isFinite(d.usleP) ? d.usleP : parseNumberPtBr(d.usleP);
+  const rProxy = Number.isFinite(d.climaRProxy) ? d.climaRProxy : null;
+  const kUsle = textureToKUsle(d.textura);
+  const ls = estimateLSRUSLE(declividadePct, usleComprimentoM);
+  const c = icsMedia === null ? null : (1 - clamp01(icsMedia));
+
+  let uslePerdaTpha = null;
+  if (
+    Number.isFinite(rProxy) &&
+    Number.isFinite(kUsle) &&
+    Number.isFinite(ls) &&
+    Number.isFinite(c) &&
+    Number.isFinite(usleP)
+  ) {
+    const a = rProxy * kUsle * ls * c * usleP;
+    uslePerdaTpha = (Number.isFinite(a) && a >= 0) ? a : null;
+  }
+
   return {
     exposicao,
     riscoScore,
@@ -525,6 +613,14 @@ function calcularIndicadoresAvancados(d) {
     imcDesc: imcClass.desc,
     areaExposta,
     textoClima,
+    uslePerdaTpha,
+    usleFatores: {
+      R: rProxy,
+      K: kUsle,
+      LS: ls,
+      C: c,
+      P: Number.isFinite(usleP) ? usleP : null,
+    },
   };
 }
 
@@ -562,6 +658,12 @@ function atualizarBlocosAvancados(dados) {
     setText('risco-declividade', parseNumberPtBr(dados.declividade) === null ? '-' : String(parseNumberPtBr(dados.declividade).toFixed(1)));
     const texturaTxt = String(dados.textura ?? '').trim();
     setText('risco-textura', texturaTxt === '' ? '-' : texturaTxt);
+
+    // USLE (estimativa)
+    setText('usle-perda', Number.isFinite(avan.uslePerdaTpha) ? avan.uslePerdaTpha.toFixed(2) : '-');
+    const fatores = avan.usleFatores || {};
+    const okUsle = Number.isFinite(fatores.R) && Number.isFinite(fatores.K) && Number.isFinite(fatores.LS) && Number.isFinite(fatores.C) && Number.isFinite(fatores.P);
+    setText('usle-desc', okUsle ? 't/ha (período climático)' : 'Preencha clima + rampa + P');
   }
 
   if (sustGrid) {
@@ -577,22 +679,27 @@ function atualizarBlocosAvancados(dados) {
 }
 
 async function buscarDadosClimaticos() {
+  const btnBuscarClima = document.getElementById('btnBuscarClima');
   const lat = parseNumberPtBr(document.getElementById('latitude')?.value);
   const lon = parseNumberPtBr(document.getElementById('longitude')?.value);
   const inicio = document.getElementById('climaInicio')?.value ?? '';
   const fim = document.getElementById('climaFim')?.value ?? '';
 
   if (lat === null || lon === null || !Number.isFinite(lat) || !Number.isFinite(lon)) {
-    mostrarMensagem('Erro: informe latitude e longitude válidas para buscar dados climáticos.', 'error');
+    setClimaStatus('Erro: informe latitude e longitude válidas para buscar dados climáticos.', { type: 'error', loading: false, show: true });
     return;
   }
   if (inicio === '' || fim === '') {
-    mostrarMensagem('Erro: informe início e fim do período climático.', 'error');
+    setClimaStatus('Erro: informe início e fim do período climático.', { type: 'error', loading: false, show: true });
     return;
   }
 
   try {
-    mostrarMensagem('Buscando dados climáticos (API pública)...', 'success');
+    setClimaStatus('Buscando dados climáticos (API pública)...', { type: 'info', loading: true, show: true });
+    if (btnBuscarClima) {
+      btnBuscarClima.disabled = true;
+      btnBuscarClima.setAttribute('aria-busy', 'true');
+    }
 
     const params = new URLSearchParams({
       latitude: String(lat),
@@ -615,6 +722,7 @@ async function buscarDadosClimaticos() {
     const chuva30d = sumLast(precip, 30);
     const maxDia = precip.length ? Math.max(...precip.filter((v) => Number.isFinite(v))) : null;
     const tempMedia = avgArray(tmean);
+    const rProxy = estimateRProxyFromPrecipDaily(precip);
 
     window.ultimaClima = {
       latitude: lat,
@@ -626,6 +734,7 @@ async function buscarDadosClimaticos() {
       chuva30d,
       maxDia,
       tempMedia,
+      rProxy,
       fonte: 'open-meteo',
       fetchedAt: new Date().toISOString(),
     };
@@ -641,6 +750,7 @@ async function buscarDadosClimaticos() {
       window.ultimaDados.climaChuva30dMm = Number.isFinite(chuva30d) ? chuva30d : null;
       window.ultimaDados.climaChuvaMaxDiaMm = Number.isFinite(maxDia) ? maxDia : null;
       window.ultimaDados.climaTempMediaC = Number.isFinite(tempMedia) ? tempMedia : null;
+      window.ultimaDados.climaRProxy = Number.isFinite(rProxy) ? rProxy : null;
     }
 
     atualizarBlocosAvancados({
@@ -649,12 +759,18 @@ async function buscarDadosClimaticos() {
       climaChuva7dMm: Number.isFinite(chuva7d) ? chuva7d : null,
       climaChuva30dMm: Number.isFinite(chuva30d) ? chuva30d : null,
       climaChuvaMaxDiaMm: Number.isFinite(maxDia) ? maxDia : null,
+      climaRProxy: Number.isFinite(rProxy) ? rProxy : null,
     });
 
-    mostrarMensagem('✓ Dados climáticos carregados e integrados à análise.', 'success');
+    setClimaStatus('✓ Dados climáticos carregados e integrados à análise.', { type: 'success', loading: false, show: true });
   } catch (err) {
     console.error('Erro ao buscar clima:', err);
-    mostrarMensagem(`Erro ao buscar clima: ${err?.message || err}`, 'error');
+    setClimaStatus(`Erro ao buscar clima: ${err?.message || err}`, { type: 'error', loading: false, show: true });
+  } finally {
+    if (btnBuscarClima) {
+      btnBuscarClima.disabled = false;
+      btnBuscarClima.removeAttribute('aria-busy');
+    }
   }
 }
 
@@ -701,6 +817,8 @@ function calcular() {
 
   const textura = document.getElementById('textura')?.value ?? '';
   const declividade = document.getElementById('declividade')?.value ?? '';
+  const usleComprimentoM = parseNumberPtBr(document.getElementById('usleComprimento')?.value);
+  const usleP = parseNumberPtBr(document.getElementById('uslePratica')?.value);
 
   // Calibração opcional: A_campo e áreas (m²)
   let areaCampo = null;
@@ -753,8 +871,13 @@ function calcular() {
     classeDesc = 'Cobertura Total (>90%)';
   }
 
-  document.getElementById('media').textContent = media.toFixed(3);
-  document.getElementById('percentual').textContent = `${percentual.toFixed(1)}%`;
+  const setTextById = (id, text) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  };
+
+  setTextById('media', media.toFixed(3));
+  setTextById('percentual', `${percentual.toFixed(1)}%`);
 
   // Bloco "Como foi calculado" (mantém compatibilidade com versões antigas)
   const calcTextEl = document.getElementById('calc-text');
@@ -773,15 +896,17 @@ function calcular() {
   if (calcIcs2El) calcIcs2El.textContent = media.toFixed(3);
   if (calcPctEl) calcPctEl.textContent = `${percentual.toFixed(1)}%`;
 
-  document.getElementById('desvio').textContent = desvio.toFixed(3);
-  document.getElementById('cv').textContent = `${cv.toFixed(1)}%`;
-  document.getElementById('classe').textContent = classe;
-  document.getElementById('classe-desc').textContent = classeDesc;
-  document.getElementById('amplitude').textContent = amplitude.toFixed(3);
-  document.getElementById('minimo').textContent = minimo.toFixed(3);
-  document.getElementById('maximo').textContent = maximo.toFixed(3);
+  // Alguns campos podem estar ocultos/removidos no HTML (ex.: desvio/cv).
+  setTextById('desvio', desvio.toFixed(3));
+  setTextById('cv', `${cv.toFixed(1)}%`);
+  setTextById('classe', classe);
+  setTextById('classe-desc', classeDesc);
+  setTextById('amplitude', amplitude.toFixed(3));
+  setTextById('minimo', minimo.toFixed(3));
+  setTextById('maximo', maximo.toFixed(3));
 
   const tbody = document.getElementById('readings-table-body');
+  if (!tbody) return;
   tbody.innerHTML = '';
   leituras.forEach((val, idx) => {
     let classeLeitura;
@@ -831,6 +956,7 @@ function calcular() {
   const climaChuva30dMm = climaAtivo && Number.isFinite(climaAtivo.chuva30d) ? climaAtivo.chuva30d : null;
   const climaChuvaMaxDiaMm = climaAtivo && Number.isFinite(climaAtivo.maxDia) ? climaAtivo.maxDia : null;
   const climaTempMediaC = climaAtivo && Number.isFinite(climaAtivo.tempMedia) ? climaAtivo.tempMedia : null;
+  const climaRProxy = climaAtivo && Number.isFinite(climaAtivo.rProxy) ? climaAtivo.rProxy : null;
 
   const avanPreview = atualizarBlocosAvancados({
     media,
@@ -840,10 +966,13 @@ function calcular() {
     chuva: document.getElementById('chuva')?.value,
     textura,
     declividade,
+    usleComprimentoM,
+    usleP,
     climaChuvaTotalMm,
     climaChuva7dMm,
     climaChuva30dMm,
     climaChuvaMaxDiaMm,
+    climaRProxy,
   });
 
   window.ultimaDados = {
@@ -874,6 +1003,9 @@ function calcular() {
     climaChuva30dMm,
     climaChuvaMaxDiaMm,
     climaTempMediaC,
+    climaRProxy,
+    usleComprimentoM,
+    usleP,
     exposicao: avanPreview.exposicao,
     riscoErosaoScore: avanPreview.riscoScore,
     riscoErosaoClasse: avanPreview.riscoClasse,
@@ -883,6 +1015,8 @@ function calcular() {
     imcDesc: avanPreview.imcDesc,
     areaExposta: avanPreview.areaExposta,
     textoClima: avanPreview.textoClima,
+    uslePerdaTpha: avanPreview.uslePerdaTpha,
+    usleFatores: avanPreview.usleFatores,
     distVisada: document.getElementById('distVisada')?.value ?? '',
     campoModo,
     campoLargura,
@@ -976,8 +1110,54 @@ function exportarPDF() {
     // Calcula largura do label para posicionar o valor
     const labelW = doc.getTextWidth(label + ':');
     
+    const valueX = x + 2 + labelW + 2;
+    const valueMaxW = Math.max(10, (x + w) - 2 - valueX);
+
     doc.setFont(undefined, 'normal');
-    doc.text(String(value || '-'), x + 2 + labelW + 2, y + 4.5);
+    const rawValue = String(value || '-');
+
+    // Para textos longos (ex.: Obs/Clima), tenta quebrar em múltiplas linhas dentro do box.
+    // Fallback seguro: corta com reticências se ainda não couber.
+    const wrap = label === 'Obs/Clima';
+    if (wrap && typeof doc.splitTextToSize === 'function') {
+      const valueFontSize = 7;
+      doc.setFontSize(valueFontSize);
+
+      const lineHeight = 3.3; // mm (aprox.)
+      const maxLines = Math.max(1, Math.floor((h - 2) / lineHeight));
+      let lines = doc.splitTextToSize(rawValue, valueMaxW);
+
+      if (Array.isArray(lines) && lines.length > maxLines) {
+        lines = lines.slice(0, maxLines);
+        const last = String(lines[lines.length - 1] ?? '');
+        // tenta adicionar reticências no final
+        const ellipsis = '…';
+        let trimmed = last;
+        while (trimmed.length > 0 && doc.getTextWidth(trimmed + ellipsis) > valueMaxW) {
+          trimmed = trimmed.slice(0, -1);
+        }
+        lines[lines.length - 1] = trimmed.length > 0 ? (trimmed + ellipsis) : ellipsis;
+      }
+
+      const startY = y + 4.2; // baseline da 1ª linha
+      lines.forEach((ln, idx) => {
+        const yy = startY + idx * lineHeight;
+        if (yy <= y + h - 1) doc.text(String(ln), valueX, yy);
+      });
+    } else {
+      doc.setFontSize(9);
+      // Se exceder a largura, aplica corte com reticências
+      const ellipsis = '…';
+      let txt = rawValue;
+      while (txt.length > 0 && doc.getTextWidth(txt) > valueMaxW) {
+        txt = txt.slice(0, -1);
+      }
+      while (txt.length > 0 && doc.getTextWidth(txt + ellipsis) > valueMaxW) {
+        txt = txt.slice(0, -1);
+      }
+      const out = (doc.getTextWidth(rawValue) <= valueMaxW) ? rawValue : ((txt.length > 0 ? txt : '') + ellipsis);
+      doc.text(out, valueX, y + 4.5);
+    }
     
     // Borda inferior (linha)
     doc.setDrawColor(150);
@@ -1133,7 +1313,8 @@ function exportarPDF() {
   // -- Coluna Direita: Campos de Texto
   const fieldsX = imgX + colImgW;
   const fieldsW = contentW - colVerW - colImgW;
-  const rowH = box1Height / 5; // 5 linhas de 8mm
+  const rowH = 7; // primeiras 4 linhas
+  const rowHObs = box1Height - rowH * 4; // última linha (Obs/Clima) maior para caber quebra
 
   doc.setDrawColor(0); // Preto para linhas internas
 
@@ -1150,7 +1331,7 @@ function exportarPDF() {
   drawField('Operador', d.operador, fieldsX, yBox1 + rowH * 3, halfW, rowH);
   drawField('Unid. Amostral', d.area, fieldsX + halfW, yBox1 + rowH * 3, halfW, rowH);
   // Linha 5 (Notas/Obs)
-  drawField('Obs/Clima', `${d.textoClima || (d.luz + ' ' + d.notas).trim()}`, fieldsX, yBox1 + rowH * 4, fieldsW, rowH);
+  drawField('Obs/Clima', `${d.textoClima || (d.luz + ' ' + d.notas).trim()}`, fieldsX, yBox1 + rowH * 4, fieldsW, rowHObs);
 
   y += box1Height + 5;
 
@@ -1481,6 +1662,10 @@ function limpar() {
   if (climaIniEl) climaIniEl.value = '';
   const climaFimEl = document.getElementById('climaFim');
   if (climaFimEl) climaFimEl.value = '';
+  const usleComprimentoEl = document.getElementById('usleComprimento');
+  if (usleComprimentoEl) usleComprimentoEl.value = '';
+  const uslePraticaEl = document.getElementById('uslePratica');
+  if (uslePraticaEl) uslePraticaEl.value = '';
   const distEl = document.getElementById('distVisada');
   if (distEl) distEl.value = '';
   const campoModoEl = document.getElementById('campoModo');
@@ -1491,6 +1676,7 @@ function limpar() {
   if (campoAlturaEl) campoAlturaEl.value = '';
   document.getElementById('results').classList.add('results-hidden');
   document.getElementById('mensagem').classList.add('hidden');
+  clearClimaStatus();
   document.getElementById('area-results')?.classList?.add('hidden');
   document.getElementById('clima-results')?.classList?.add('hidden');
   document.getElementById('risco-results')?.classList?.add('hidden');
@@ -1501,6 +1687,10 @@ function limpar() {
 }
 
 window.addEventListener('load', () => {
+  // Exposição explícita para handlers inline e para depuração.
+  window.calcular = calcular;
+  window.safeCalcular = safeCalcular;
+
   const numLeiturasEl = document.getElementById('numLeituras');
   const btnCalcular = document.getElementById('btnCalcular');
   const btnExportar = document.getElementById('btnExportarPDF');
@@ -1509,21 +1699,40 @@ window.addEventListener('load', () => {
 
   const campoModoEl = document.getElementById('campoModo');
 
-  // Ajuda (modal)
-  const btnAjudaLeituras = document.getElementById('btnAjudaLeituras');
-  const ajudaModal = document.getElementById('ajudaModal');
-  const btnFecharAjuda = document.getElementById('btnFecharAjuda');
+  // Modais (ajuda + interpretação)
+  const registerModal = ({ openBtnId, modalId, closeBtnId }) => {
+    const openBtn = document.getElementById(openBtnId);
+    const modal = document.getElementById(modalId);
+    const closeBtn = document.getElementById(closeBtnId);
 
-  const setAjudaOpen = (open) => {
-    if (!ajudaModal) return;
-    ajudaModal.classList.toggle('open', open);
-    ajudaModal.setAttribute('aria-hidden', open ? 'false' : 'true');
-    if (open) {
-      btnFecharAjuda?.focus?.();
-    } else {
-      btnAjudaLeituras?.focus?.();
-    }
+    if (!modal) return { isOpen: () => false, setOpen: () => {} };
+
+    const setOpen = (open) => {
+      modal.classList.toggle('open', open);
+      modal.setAttribute('aria-hidden', open ? 'false' : 'true');
+      if (open) closeBtn?.focus?.();
+      else openBtn?.focus?.();
+    };
+
+    if (openBtn) openBtn.addEventListener('click', () => setOpen(true));
+    if (closeBtn) closeBtn.addEventListener('click', () => setOpen(false));
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) setOpen(false);
+    });
+
+    return {
+      isOpen: () => modal.classList.contains('open'),
+      setOpen,
+    };
   };
+
+  const modalAjuda = registerModal({ openBtnId: 'btnAjudaLeituras', modalId: 'ajudaModal', closeBtnId: 'btnFecharAjuda' });
+  const modalRisco = registerModal({ openBtnId: 'btnAjudaRisco', modalId: 'riscoModal', closeBtnId: 'btnFecharRisco' });
+  const modalIMC = registerModal({ openBtnId: 'btnAjudaIMC', modalId: 'imcModal', closeBtnId: 'btnFecharIMC' });
+  const modalCV = registerModal({ openBtnId: 'btnAjudaCV', modalId: 'cvModal', closeBtnId: 'btnFecharCV' });
+  const modalRange = registerModal({ openBtnId: 'btnAjudaRange', modalId: 'rangeModal', closeBtnId: 'btnFecharRange' });
+  const modalUSLE = registerModal({ openBtnId: 'btnAjudaUSLE', modalId: 'usleModal', closeBtnId: 'btnFecharUSLE' });
 
   if (numLeiturasEl) {
     numLeiturasEl.addEventListener('change', setupLeituras);
@@ -1533,27 +1742,17 @@ window.addEventListener('load', () => {
     campoModoEl.addEventListener('change', setupCampoCalibracao);
   }
 
-  if (btnAjudaLeituras) {
-    btnAjudaLeituras.addEventListener('click', () => setAjudaOpen(true));
-  }
-
-  if (btnFecharAjuda) {
-    btnFecharAjuda.addEventListener('click', () => setAjudaOpen(false));
-  }
-
-  if (ajudaModal) {
-    ajudaModal.addEventListener('click', (e) => {
-      if (e.target === ajudaModal) setAjudaOpen(false);
-    });
-  }
-
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && ajudaModal?.classList.contains('open')) {
-      setAjudaOpen(false);
-    }
+    if (e.key !== 'Escape') return;
+    if (modalAjuda.isOpen()) modalAjuda.setOpen(false);
+    if (modalRisco.isOpen()) modalRisco.setOpen(false);
+    if (modalIMC.isOpen()) modalIMC.setOpen(false);
+    if (modalCV.isOpen()) modalCV.setOpen(false);
+    if (modalRange.isOpen()) modalRange.setOpen(false);
+    if (modalUSLE.isOpen()) modalUSLE.setOpen(false);
   });
 
-  if (btnCalcular) btnCalcular.addEventListener('click', calcular);
+  if (btnCalcular) btnCalcular.addEventListener('click', safeCalcular);
   if (btnExportar) btnExportar.addEventListener('click', exportarPDF);
   if (btnLimpar) btnLimpar.addEventListener('click', limpar);
   if (btnBuscarClima) btnBuscarClima.addEventListener('click', buscarDadosClimaticos);
