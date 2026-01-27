@@ -254,13 +254,11 @@ function desenharBarrasFrequenciaICS(doc, x, y, w, h, valores, theme) {
     const bh = (counts[i] / maxCount) * (plotH - 2);
     const by = plotY + plotH - bh;
     const fill = i % 2 === 0 ? barA : barB;
-    desenharRetanguloRachurado(doc, bx, by, barW, bh, {
-      fillRgb: fill,
-      hatchRgb: hatch,
-      spacing: 2.6,
-      angle: i % 2 === 0 ? 45 : -45,
-      lineWidth: 0.12,
-    });
+    
+    // Desenha barra sólida (sem hachura "zebra")
+    doc.setFillColor(fill.r, fill.g, fill.b);
+    doc.rect(bx, by, barW, bh, 'F');
+    
     doc.setDrawColor(60);
     doc.setLineWidth(0.2);
     doc.rect(bx, by, barW, bh);
@@ -633,7 +631,7 @@ function exportarPDF() {
   
   y += boxHeight + 8; // Avança após o box
   
-  // --- GRÁFICOS (LADO A LADO E MENORES) ---
+  // --- GRÁFICOS (APENAS BARRAS) ---
   if (y + 60 > 280) { doc.addPage(); y = 20; }
   
   doc.setTextColor(0);
@@ -644,23 +642,18 @@ function exportarPDF() {
   
   // Configuração visual dos gráficos
   const theme = {
-    panelHex: '#FFFFFF',     // Fundo branco para limpar
-    barAHex: '#1a5f7a',      // Azul escuro
-    barBHex: '#6ab0de',      // Azul claro
-    boxFillHex: '#e0f2f1',   // Verde claro suave
-    hatchHex: '#333333',
-    boxHatchHex: '#333333',
+    panelHex: '#FFFFFF',
+    barAHex: '#1a5f7a',
+    barBHex: '#6ab0de',
+    hatchHex: null, // Sem hachuras
   };
   
-  // Dimensões reduzidas para caber lado a lado com folga
-  const chartW = 85;
+  // Gráfico centralizado e sem boxplot
+  const chartW = 90;
   const chartH = 50; 
-  
-  // Desenha Boxplot (esquerda)
-  desenharBoxplotICS(doc, 15, y, chartW, chartH, dados.leituras, theme);
-  
-  // Desenha Barras (direita)
-  desenharBarrasFrequenciaICS(doc, 110, y, chartW, chartH, dados.leituras, theme);
+  const chartX = (210 - chartW) / 2; // Centralizado (60mm)
+
+  desenharBarrasFrequenciaICS(doc, chartX, y, chartW, chartH, dados.leituras, theme);
   
   y += chartH + 10;
   
@@ -672,17 +665,25 @@ function exportarPDF() {
   doc.text('DETALHAMENTO DAS LEITURAS', 15, y);
   y += 6;
   
+  // Tabela mais estreita e centralizada
+  const tableWidth = 160;
+  const tableX = (210 - tableWidth) / 2; // 25mm margem
+  
   // Cabeçalho da Tabela
   function drawTableHeader(posY) {
     doc.setFillColor(...primaryColor);
-    doc.rect(15, posY, 180, 7, 'F');
+    doc.rect(tableX, posY, tableWidth, 7, 'F');
     doc.setTextColor(255);
     doc.setFontSize(9);
     doc.setFont(undefined, 'bold');
-    doc.text('#', 20, posY + 5);
-    doc.text('Valor ICS', 50, posY + 5);
-    doc.text('Percentual', 90, posY + 5);
-    doc.text('Classe Utilizada', 140, posY + 5);
+    
+    // Colunas: #, ICS, Cobertura, Classe, Situação
+    doc.text('#', tableX + 5, posY + 5);
+    doc.text('Valor ICS', tableX + 25, posY + 5);
+    doc.text('Cobertura (%)', tableX + 55, posY + 5);
+    doc.text('Classe', tableX + 90, posY + 5);
+    doc.text('Situação', tableX + 120, posY + 5);
+    
     doc.setTextColor(0);
     return posY + 7;
   }
@@ -699,28 +700,32 @@ function exportarPDF() {
       y = drawTableHeader(y);
     }
     
-    // Zebra striping
+    // Zebra striping SUTIL ou removida (user disse zebra das BARRAS, mas tabelas clean são boas)
+    // Mantendo zebra de tabela pois o pedido foi "zebra das barras"
     if (i % 2 === 1) {
       doc.setFillColor(245, 245, 245);
-      doc.rect(15, y, 180, 6, 'F');
+      doc.rect(tableX, y, tableWidth, 6, 'F');
     }
     
     let classeLeitura;
-    if (val < 0.125) classeLeitura = '0.00';
-    else if (val < 0.375) classeLeitura = '0.25';
-    else if (val < 0.625) classeLeitura = '0.50';
-    else if (val < 0.875) classeLeitura = '0.75';
-    else classeLeitura = '1.00';
+    let classeDescCurta;
+    
+    if (val < 0.125) { classeLeitura = '0.00'; classeDescCurta = 'Solo Exposto'; }
+    else if (val < 0.375) { classeLeitura = '0.25'; classeDescCurta = 'Baixa'; }
+    else if (val < 0.625) { classeLeitura = '0.50'; classeDescCurta = 'Intermediária'; }
+    else if (val < 0.875) { classeLeitura = '0.75'; classeDescCurta = 'Alta'; }
+    else { classeLeitura = '1.00'; classeDescCurta = 'Total'; }
     
     doc.setFontSize(9);
-    doc.text(`L${i + 1}`, 20, y + 4);
-    doc.text(val.toFixed(2), 50, y + 4);
-    doc.text(`${(val * 100).toFixed(1)}%`, 90, y + 4);
-    doc.text(classeLeitura, 140, y + 4);
+    doc.text(`L${i + 1}`, tableX + 5, y + 4);
+    doc.text(val.toFixed(2), tableX + 25, y + 4);
+    doc.text(`${(val * 100).toFixed(1)}%`, tableX + 55, y + 4);
+    doc.text(classeLeitura, tableX + 90, y + 4);
+    doc.text(classeDescCurta, tableX + 120, y + 4);
     
-    // Linha sutil separadora
+    // Linha sutil separadora apenas na área da tabela
     doc.setDrawColor(230);
-    doc.line(15, y + 6, 195, y + 6);
+    doc.line(tableX, y + 6, tableX + tableWidth, y + 6);
     
     y += 6;
   });
