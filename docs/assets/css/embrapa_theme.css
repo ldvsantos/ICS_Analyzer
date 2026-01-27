@@ -210,6 +210,12 @@
     font-size: 1.75rem;
     margin-bottom: 2rem;
   }
+
+  /* Force single column for team on mobile to prevent overflow */
+  .team-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
 }
 
 /* Team Section */
