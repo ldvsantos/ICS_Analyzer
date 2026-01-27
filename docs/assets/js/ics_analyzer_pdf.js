@@ -501,7 +501,7 @@ function exportarPDF() {
   }
 
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF('p', 'mm', 'a4');
+  const doc = new jsPDF('p', 'mm', 'a4'); // A4: 210 x 297 mm
 
   const dados = {
     ...window.ultimaDados,
@@ -524,213 +524,214 @@ function exportarPDF() {
     campoAltura: document.getElementById('campoAltura')?.value ?? window.ultimaDados.campoAltura,
   };
 
-  let y = 20;
+  // Configurações de estilo
+  const primaryColor = [26, 95, 122]; // Azul principal
+  const headerHeight = 25;
+  let y = 0;
 
-  doc.setFillColor(26, 95, 122);
-  doc.rect(10, 10, 190, 20, 'F');
-
+  // --- HEADER ---
+  doc.setFillColor(...primaryColor);
+  doc.rect(0, 0, 210, headerHeight, 'F');
+  
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
-  doc.text('RELATÓRIO DE ANÁLISE ICS', 105, 25, { align: 'center' });
-
-  doc.setTextColor(0, 0, 0);
-  y = 35;
-
-  doc.setFontSize(11);
+  doc.setFontSize(16);
   doc.setFont(undefined, 'bold');
-  doc.text('INFORMAÇÕES DO PROJETO', 15, y);
-  y += 8;
-
+  doc.text('ICS ANALYZER - Relatório Técnico', 15, 16);
+  
   doc.setFont(undefined, 'normal');
   doc.setFontSize(10);
-  const infoTexto = [
-    `Projeto: ${dados.projeto || 'N/A'}`,
-    `Local: ${dados.local || 'N/A'}`,
-    `Unidade Amostral: ${dados.area || 'N/A'}`,
-    `Data: ${dados.data || 'N/A'} | Hora: ${dados.hora || 'N/A'}`,
-    `Operador: ${dados.operador || 'N/A'}`,
-  ];
+  doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 195, 16, { align: 'right' });
+  
+  y = 35;
+  
+  // --- SEÇÃO DE DADOS (2 COLUNAS) ---
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(11);
+  doc.setFont(undefined, 'bold');
+  doc.text('DADOS DO PROJETO', 15, y);
+  doc.text('CONDIÇÕES AMBIENTAIS', 110, y);
+  
+  y += 5;
+  doc.setFont(undefined, 'normal');
+  doc.setFontSize(9);
+  
+  const startYValues = y;
+  const leftX = 15;
+  const rightX = 110;
+  const lineHeight = 5;
+  
+  // Coluna Esquerda
+  doc.text(`Projeto: ${dados.projeto || '-'}`, leftX, y); y += lineHeight;
+  doc.text(`Local: ${dados.local || '-'}`, leftX, y); y += lineHeight;
+  doc.text(`Unidade Amostral: ${dados.area || '-'}`, leftX, y); y += lineHeight;
+  doc.text(`Data: ${dados.data || '-'} | Hora: ${dados.hora || '-'}`, leftX, y); y += lineHeight;
+  doc.text(`Operador: ${dados.operador || '-'}`, leftX, y); y += lineHeight;
 
-  infoTexto.forEach((texto) => {
-    doc.text(texto, 15, y);
-    y += 6;
-  });
+  // Coluna Direita (reset Y)
+  const yEnv = startYValues;
+  let yRight = yEnv;
+  doc.text(`Céu/Iluminação: ${dados.luz || '-'}`, rightX, yRight); yRight += lineHeight;
+  doc.text(`Sombra: ${dados.sombra || '-'}`, rightX, yRight); yRight += lineHeight;
+  doc.text(`Vento: ${dados.vento || '-'}`, rightX, yRight); yRight += lineHeight;
+  doc.text(`Chuva Recente: ${dados.chuva || '-'}`, rightX, yRight); yRight += lineHeight;
+  doc.text(`Obs: ${dados.notas || '-'}`, rightX, yRight); yRight += lineHeight;
+  
+  y = Math.max(y, yRight) + 5;
 
-  y += 3;
-
-  if (dados.luz || dados.sombra || dados.vento || dados.precip || dados.chuva || dados.umidade || dados.notas) {
+  // --- CALIBRAÇÃO (SE HOUVER) ---
+  if (dados.campoModo === 'retangular' || dados.distVisada) {
+    doc.setDrawColor(200);
+    doc.setLineWidth(0.1);
+    doc.line(15, y, 195, y);
+    y += 5;
+    
     doc.setFont(undefined, 'bold');
-    doc.text('CONDIÇÕES AMBIENTAIS', 15, y);
-    y += 6;
-
+    doc.setFontSize(10);
+    doc.text('CALIBRAÇÃO / GEOMETRIA', 15, y);
+    y += 5;
+    
     doc.setFont(undefined, 'normal');
-    const condTexto = [
-      `Céu/iluminação: ${dados.luz || 'N/A'}`,
-      `Sombra: ${dados.sombra || 'N/A'}`,
-      `Vento: ${dados.vento || 'N/A'}`,
-      `Precipitação (momento): ${dados.precip || 'N/A'}`,
-      `Precipitação recente: ${dados.chuva || 'N/A'}`,
-      `Umidade superficial: ${dados.umidade || 'N/A'}`,
-    ];
-
-    condTexto.forEach((texto) => {
-      doc.text(texto, 15, y);
-      y += 5;
-    });
-
-    if (dados.notas) {
-      doc.text(`Observações: ${dados.notas}`, 15, y);
-      y += 5;
+    doc.setFontSize(9);
+    let calibText = `Distância: ${dados.distVisada || '-'} m`;
+    if (dados.campoModo === 'retangular') {
+      calibText += ` | Geometria: Retangular (${dados.campoLargura}m x ${dados.campoAltura}m)`;
+      if (typeof dados.areaCampo === 'number') calibText += ` | Área: ${dados.areaCampo.toFixed(2)} m²`;
     }
-
+    doc.text(calibText, 15, y);
+    y += 8;
+  } else {
     y += 3;
   }
 
-  // Calibração do campo visual (opcional)
-  if (dados.campoModo || dados.campoLargura || dados.campoAltura || dados.distVisada) {
-    if (y > 260) {
+  // --- RESULTADOS (BOX EM DESTAQUE) ---
+  const boxHeight = 35;
+  doc.setFillColor(248, 249, 250); // Fundo cinza claro
+  doc.setDrawColor(220);
+  doc.rect(15, y, 180, boxHeight, 'FD');
+  
+  const resInnerY = y + 8;
+  
+  doc.setFont(undefined, 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(...primaryColor);
+  doc.text('RESULTADOS DA ANÁLISE', 20, resInnerY);
+  
+  doc.setFontSize(14); // Destaque
+  doc.text(`ICS: ${dados.media.toFixed(3)}`, 20, resInnerY + 10);
+  doc.text(`Cobertura: ${dados.percentual.toFixed(1)}%`, 85, resInnerY + 10);
+  
+  doc.setFontSize(10);
+  doc.setTextColor(0);
+  doc.setFont(undefined, 'bold');
+  doc.text(`Classe: ${dados.classe}`, 20, resInnerY + 20);
+  doc.setFont(undefined, 'normal');
+  doc.text(`(${dados.classeDesc})`, 50, resInnerY + 20);
+  
+  doc.setFontSize(9);
+  doc.setTextColor(80);
+  doc.text(`Desvio: ${dados.desvio.toFixed(3)} | CV: ${dados.cv.toFixed(1)}% | Amplitude: ${dados.amplitude.toFixed(3)}`, 20, resInnerY + 26);
+  
+  y += boxHeight + 8; // Avança após o box
+  
+  // --- GRÁFICOS (LADO A LADO E MENORES) ---
+  if (y + 60 > 280) { doc.addPage(); y = 20; }
+  
+  doc.setTextColor(0);
+  doc.setFont(undefined, 'bold');
+  doc.setFontSize(11);
+  doc.text('ANÁLISE GRÁFICA', 15, y);
+  y += 5;
+  
+  // Configuração visual dos gráficos
+  const theme = {
+    panelHex: '#FFFFFF',     // Fundo branco para limpar
+    barAHex: '#1a5f7a',      // Azul escuro
+    barBHex: '#6ab0de',      // Azul claro
+    boxFillHex: '#e0f2f1',   // Verde claro suave
+    hatchHex: '#333333',
+    boxHatchHex: '#333333',
+  };
+  
+  // Dimensões reduzidas para caber lado a lado com folga
+  const chartW = 85;
+  const chartH = 50; 
+  
+  // Desenha Boxplot (esquerda)
+  desenharBoxplotICS(doc, 15, y, chartW, chartH, dados.leituras, theme);
+  
+  // Desenha Barras (direita)
+  desenharBarrasFrequenciaICS(doc, 110, y, chartW, chartH, dados.leituras, theme);
+  
+  y += chartH + 10;
+  
+  // --- TABELA DE LEITURAS ---
+  if (y + 15 > 280) { doc.addPage(); y = 20; }
+  
+  doc.setFont(undefined, 'bold');
+  doc.setFontSize(11);
+  doc.text('DETALHAMENTO DAS LEITURAS', 15, y);
+  y += 6;
+  
+  // Cabeçalho da Tabela
+  function drawTableHeader(posY) {
+    doc.setFillColor(...primaryColor);
+    doc.rect(15, posY, 180, 7, 'F');
+    doc.setTextColor(255);
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'bold');
+    doc.text('#', 20, posY + 5);
+    doc.text('Valor ICS', 50, posY + 5);
+    doc.text('Percentual', 90, posY + 5);
+    doc.text('Classe Utilizada', 140, posY + 5);
+    doc.setTextColor(0);
+    return posY + 7;
+  }
+  
+  y = drawTableHeader(y);
+  
+  doc.setFont(undefined, 'normal');
+  
+  dados.leituras.forEach((val, i) => {
+    // Nova página se necessário
+    if (y > 280) {
       doc.addPage();
       y = 20;
+      y = drawTableHeader(y);
     }
-
-    doc.setFont(undefined, 'bold');
-    doc.text('CALIBRAÇÃO DO CAMPO VISUAL', 15, y);
-    y += 6;
-
-    doc.setFont(undefined, 'normal');
-    const modoTexto = dados.campoModo === 'retangular' ? 'Retangular' : 'Não informado';
-    const calibTexto = [
-      `Distância de visada (D): ${dados.distVisada || 'N/A'}${dados.distVisada ? ' m' : ''}`,
-      `Geometria do campo: ${modoTexto}`,
-    ];
-    if (dados.campoModo === 'retangular') {
-      calibTexto.push(`Largura (W): ${dados.campoLargura || 'N/A'}${dados.campoLargura ? ' m' : ''}`);
-      calibTexto.push(`Altura (H): ${dados.campoAltura || 'N/A'}${dados.campoAltura ? ' m' : ''}`);
+    
+    // Zebra striping
+    if (i % 2 === 1) {
+      doc.setFillColor(245, 245, 245);
+      doc.rect(15, y, 180, 6, 'F');
     }
-
-    calibTexto.forEach((texto) => {
-      doc.text(texto, 15, y);
-      y += 5;
-    });
-
-    if (typeof dados.areaCampo === 'number') {
-      doc.text(`Área do campo (A_campo): ${dados.areaCampo.toFixed(2)} m²`, 15, y);
-      y += 5;
-    }
-
-    y += 3;
-  }
-
-  doc.setFont(undefined, 'bold');
-  doc.setFontSize(11);
-  doc.text('RESULTADOS DA ANÁLISE', 15, y);
-  y += 8;
-
-  doc.setFont(undefined, 'normal');
-  doc.setFontSize(10);
-  const resultTexto = [
-    `Índice de Cobertura (ICS médio): ${dados.media.toFixed(3)} (soma(ICS_i)/n)`,
-    `Cobertura do solo (%): ${dados.percentual.toFixed(1)}% (100 x soma(ICS_i)/n)`,
-    'Equivalência (patente): se ICS_i = At_i/A_campo, então % = 100 x soma(At_i)/(n * A_campo)',
-    ...(typeof dados.areaCampo === 'number'
-      ? [
-          `Área coberta média: ${(dados.media * dados.areaCampo).toFixed(2)} m² (ICS médio x A_campo)`,
-          `Área coberta total: ${(dados.somaIcs * dados.areaCampo).toFixed(2)} m² (soma(At_i))`,
-        ]
-      : []),
-    `Classificação: ${dados.classe} - ${dados.classeDesc}`,
-    `Desvio Padrão: ${dados.desvio.toFixed(3)}`,
-    `Coeficiente de Variação: ${dados.cv.toFixed(1)}%`,
-    `Amplitude: ${dados.amplitude.toFixed(3)} (Min: ${dados.minimo.toFixed(3)} | Max: ${dados.maximo.toFixed(3)})`,
-  ];
-
-  resultTexto.forEach((texto) => {
-    doc.text(texto, 15, y);
-    y += 6;
-  });
-
-  y += 3;
-
-  // Gráficos (estilo profissional com cores + rachuras)
-  // (Observação: 1 boxplot por conjunto de leituras da análise atual)
-  if (y > 220) {
-    doc.addPage();
-    y = 20;
-  }
-
-  doc.setFont(undefined, 'bold');
-  doc.setFontSize(11);
-  doc.text('GRÁFICOS', 15, y);
-  y += 6;
-
-  doc.setFont(undefined, 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(70);
-  doc.text('Distribuição das leituras (ICS) e frequência por classe (cores/rachuras conforme modelo).', 15, y);
-  doc.setTextColor(0);
-  y += 4;
-
-  const theme = {
-    panelHex: '#EAEAEA',
-    barAHex: '#DECBE4',
-    barBHex: '#CCEBC5',
-    boxFillHex: '#CCEBC5',
-    hatchHex: '#383838',
-    boxHatchHex: '#383838',
-  };
-
-  const chartTop = y;
-  const chartH = 58;
-  const boxW = 92;
-  const barW = 92;
-
-  desenharBoxplotICS(doc, 15, chartTop, boxW, chartH, dados.leituras, theme);
-  desenharBarrasFrequenciaICS(doc, 108, chartTop, barW, chartH, dados.leituras, theme);
-  y = chartTop + chartH + 8;
-
-  doc.setFont(undefined, 'bold');
-  doc.text('LEITURAS INDIVIDUAIS', 15, y);
-  y += 5;
-
-  doc.setFont(undefined, 'normal');
-  doc.setFontSize(9);
-
-  doc.setFillColor(26, 95, 122);
-  doc.setTextColor(255, 255, 255);
-  doc.text('Leitura', 15, y);
-  doc.text('Valor ICS', 45, y);
-  doc.text('Percentual', 75, y);
-  doc.text('Classe', 105, y);
-  y += 5;
-
-  doc.setTextColor(0, 0, 0);
-  dados.leituras.forEach((val, idx) => {
+    
     let classeLeitura;
     if (val < 0.125) classeLeitura = '0.00';
     else if (val < 0.375) classeLeitura = '0.25';
     else if (val < 0.625) classeLeitura = '0.50';
     else if (val < 0.875) classeLeitura = '0.75';
     else classeLeitura = '1.00';
-
-    if (y > 270) {
-      doc.addPage();
-      y = 20;
-    }
-
-    doc.text(`L${idx + 1}`, 15, y);
-    doc.text(val.toFixed(2), 45, y);
-    doc.text(`${(val * 100).toFixed(1)}%`, 75, y);
-    doc.text(classeLeitura, 105, y);
-    y += 5;
+    
+    doc.setFontSize(9);
+    doc.text(`L${i + 1}`, 20, y + 4);
+    doc.text(val.toFixed(2), 50, y + 4);
+    doc.text(`${(val * 100).toFixed(1)}%`, 90, y + 4);
+    doc.text(classeLeitura, 140, y + 4);
+    
+    // Linha sutil separadora
+    doc.setDrawColor(230);
+    doc.line(15, y + 6, 195, y + 6);
+    
+    y += 6;
   });
-
+  
+  // --- RODAPÉ ---
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
-    doc.setTextColor(150);
     doc.setFontSize(8);
-    doc.text(`Página ${i} de ${pageCount}`, 105, 290, { align: 'center' });
-    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 105, 295, { align: 'center' });
+    doc.setTextColor(150);
+    doc.text(`Página ${i} de ${pageCount} - ICS Analyzer`, 105, 290, { align: 'center' });
   }
 
   const nomeArquivo = `ICS_${dados.projeto || 'Analise'}_${new Date().toISOString().split('T')[0]}.pdf`;
