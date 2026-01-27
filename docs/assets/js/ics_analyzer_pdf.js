@@ -324,9 +324,14 @@ function desenharAreaChartICS(doc, x, y, w, h, valores, theme) {
   }
 
   // Títulos Eixos
-  doc.setFontSize(8);
   doc.setTextColor(50);
-  doc.text('Indice de Cobertura do Solo ICS (%)', plotX - 5, plotY + plotH / 2, { angle: 90, align: 'center' });
+
+  // Eixo Y: um pouco menor e mais próximo do eixo
+  doc.setFontSize(7);
+  doc.text('Indice de Cobertura do Solo ICS (%)', plotX - 3, plotY + plotH / 2, { angle: 90, align: 'center' });
+
+  // Eixo X
+  doc.setFontSize(8);
   doc.text('Pontos de Leitura (L)', plotX + plotW / 2, plotY + plotH + 9, { align: 'center' });
 }
 
