@@ -327,7 +327,7 @@ function desenharAreaChartICS(doc, x, y, w, h, valores, theme) {
   doc.setTextColor(50);
 
   // Eixo Y: um pouco menor e mais próximo do eixo
-  const yAxisLabel = 'Cálculo de índices de conservação do solo ICS (%)';
+  const yAxisLabel = 'Cálculo de Índices de Cobertura do Solo ICS (%)';
   doc.setFontSize(7);
   // jsPDF: com rotação, o alinhamento pode ficar “estranho”; centraliza manualmente.
   // getTextWidth retorna largura em mm para o fontSize atual.
@@ -384,6 +384,280 @@ function calcularAreaCampo() {
   throw new Error('Selecione a geometria do campo (retangular) ou deixe como “Não informar”.');
 }
 
+function parseNumberPtBr(raw) {
+  const s = String(raw ?? '').trim();
+  if (s === '') return null;
+  const n = Number.parseFloat(s.replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+
+function sumArray(values) {
+  return (values || []).reduce((acc, v) => acc + (Number.isFinite(v) ? v : 0), 0);
+}
+
+function sumLast(values, n) {
+  const arr = (values || []).filter((v) => Number.isFinite(v));
+  const slice = arr.slice(Math.max(0, arr.length - n));
+  return sumArray(slice);
+}
+
+function avgArray(values) {
+  const arr = (values || []).filter((v) => Number.isFinite(v));
+  if (arr.length === 0) return null;
+  return sumArray(arr) / arr.length;
+}
+
+function clamp01(x) {
+  if (!Number.isFinite(x)) return 0;
+  return Math.max(0, Math.min(1, x));
+}
+
+function textureToKNorm(textura) {
+  const t = String(textura ?? '').toLowerCase();
+  if (t === 'arenosa') return 0.8;
+  if (t === 'media') return 0.5;
+  if (t === 'argilosa') return 0.3;
+  return null;
+}
+
+function classificarRisco(score) {
+  if (!Number.isFinite(score)) return { classe: 'Indisponível', desc: 'Sem dados suficientes' };
+  if (score < 33) return { classe: 'Baixo', desc: 'Condição estrutural mais resiliente para a energia do evento' };
+  if (score < 66) return { classe: 'Médio', desc: 'Risco intermediário, priorizar reforço de cobertura e microconservação' };
+  return { classe: 'Alto', desc: 'Alta sensibilidade, priorizar intervenção conservacionista imediata' };
+}
+
+function classificarIMC(score) {
+  if (!Number.isFinite(score)) return { classe: 'Indisponível', desc: 'Sem dados suficientes' };
+  if (score >= 80) return { classe: 'Ótimo', desc: 'Proteção alta e distribuição mais estável' };
+  if (score >= 60) return { classe: 'Bom', desc: 'Proteção adequada com variabilidade controlável' };
+  if (score >= 40) return { classe: 'Atenção', desc: 'Proteção limitada, risco de hotspots de escoamento' };
+  return { classe: 'Crítico', desc: 'Cobertura insuficiente, alta probabilidade de perda por splash e enxurrada' };
+}
+
+function calcularIndicadoresAvancados(d) {
+  const icsMedia = Number.isFinite(d.media) ? d.media : null;
+  const cv = Number.isFinite(d.cv) ? d.cv : null;
+  const amplitude = Number.isFinite(d.amplitude) ? d.amplitude : null;
+
+  const exposicao = icsMedia === null ? null : (1 - clamp01(icsMedia));
+
+  const declividadePct = parseNumberPtBr(d.declividade);
+  const sNorm = declividadePct === null ? null : clamp01(declividadePct / 20);
+
+  const kNorm = textureToKNorm(d.textura);
+
+  const chuva30 = Number.isFinite(d.climaChuva30dMm) ? d.climaChuva30dMm : null;
+  const chuvaMaxDia = Number.isFinite(d.climaChuvaMaxDiaMm) ? d.climaChuvaMaxDiaMm : null;
+
+  let rNorm = null;
+  if (chuva30 !== null) {
+    rNorm = clamp01(chuva30 / 300);
+  } else {
+    const chuvaRecente = String(d.chuva ?? '');
+    if (chuvaRecente.includes('<24h')) rNorm = 0.7;
+    else if (chuvaRecente.includes('1-3')) rNorm = 0.5;
+    else if (chuvaRecente.includes('>3')) rNorm = 0.3;
+    else if (chuvaRecente === 'Não') rNorm = 0.15;
+  }
+
+  let rBoost = 0;
+  if (chuvaMaxDia !== null) {
+    rBoost = clamp01(chuvaMaxDia / 80) * 0.15;
+  }
+
+  const wR = 0.35;
+  const wC = 0.35;
+  const wS = 0.20;
+  const wK = 0.10;
+
+  const parts = [];
+  if (rNorm !== null) parts.push(wR);
+  if (exposicao !== null) parts.push(wC);
+  if (sNorm !== null) parts.push(wS);
+  if (kNorm !== null) parts.push(wK);
+  const wSum = parts.reduce((a, b) => a + b, 0);
+
+  let riscoScore = null;
+  if (wSum > 0) {
+    const base = (
+      (rNorm ?? 0) * wR +
+      (exposicao ?? 0) * wC +
+      (sNorm ?? 0) * wS +
+      (kNorm ?? 0) * wK
+    ) / wSum;
+    riscoScore = Math.round(100 * clamp01(base + rBoost));
+  }
+
+  const cvNorm = cv === null ? null : clamp01(cv / 100);
+  const ampNorm = amplitude === null ? null : clamp01(amplitude / 1);
+  let imcScore = null;
+  if (icsMedia !== null) {
+    const termCover = 0.7 * clamp01(icsMedia);
+    const termCv = 0.15 * (cvNorm === null ? 0 : (1 - cvNorm));
+    const termAmp = 0.15 * (ampNorm === null ? 0 : (1 - ampNorm));
+    imcScore = Math.round(100 * clamp01(termCover + termCv + termAmp));
+  }
+
+  const areaExposta = (typeof d.areaCampo === 'number' && icsMedia !== null)
+    ? (d.areaCampo * (1 - clamp01(icsMedia)))
+    : null;
+
+  const riscoClass = classificarRisco(riscoScore);
+  const imcClass = classificarIMC(imcScore);
+
+  const textoClima = (() => {
+    const partsTxt = [];
+    if (Number.isFinite(d.climaChuva7dMm)) partsTxt.push(`Chuva 7d: ${d.climaChuva7dMm.toFixed(1)} mm`);
+    if (Number.isFinite(d.climaChuva30dMm)) partsTxt.push(`Chuva 30d: ${d.climaChuva30dMm.toFixed(1)} mm`);
+    if (Number.isFinite(d.climaChuvaTotalMm)) partsTxt.push(`Chuva período: ${d.climaChuvaTotalMm.toFixed(1)} mm`);
+    if (Number.isFinite(d.climaChuvaMaxDiaMm)) partsTxt.push(`Máx dia: ${d.climaChuvaMaxDiaMm.toFixed(1)} mm`);
+    return partsTxt.join(' | ');
+  })();
+
+  return {
+    exposicao,
+    riscoScore,
+    riscoClasse: riscoClass.classe,
+    riscoDesc: riscoClass.desc,
+    imcScore,
+    imcClasse: imcClass.classe,
+    imcDesc: imcClass.desc,
+    areaExposta,
+    textoClima,
+  };
+}
+
+function atualizarBlocosAvancados(dados) {
+  const climaGrid = document.getElementById('clima-results');
+  const riscoGrid = document.getElementById('risco-results');
+  const sustGrid = document.getElementById('sust-results');
+
+  const hasClima = Number.isFinite(dados.climaChuvaTotalMm) || Number.isFinite(dados.climaChuva30dMm) || Number.isFinite(dados.climaChuva7dMm) || Number.isFinite(dados.climaChuvaMaxDiaMm);
+
+  if (climaGrid) {
+    if (hasClima) climaGrid.classList.remove('hidden');
+    else climaGrid.classList.add('hidden');
+  }
+
+  const setText = (id, txt) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = txt;
+  };
+
+  if (hasClima) {
+    setText('clima-chuva-total', Number.isFinite(dados.climaChuvaTotalMm) ? dados.climaChuvaTotalMm.toFixed(1) : '0.0');
+    setText('clima-chuva-7d', Number.isFinite(dados.climaChuva7dMm) ? dados.climaChuva7dMm.toFixed(1) : '0.0');
+    setText('clima-chuva-30d', Number.isFinite(dados.climaChuva30dMm) ? dados.climaChuva30dMm.toFixed(1) : '0.0');
+    setText('clima-chuva-maxdia', Number.isFinite(dados.climaChuvaMaxDiaMm) ? dados.climaChuvaMaxDiaMm.toFixed(1) : '0.0');
+  }
+
+  const avan = calcularIndicadoresAvancados(dados);
+
+  if (riscoGrid) {
+    riscoGrid.classList.remove('hidden');
+    setText('risco-score', Number.isFinite(avan.riscoScore) ? String(avan.riscoScore) : '-');
+    setText('risco-classe', Number.isFinite(avan.riscoScore) ? `${avan.riscoClasse} | ${avan.riscoDesc}` : 'Aguardando cálculo');
+    setText('exposicao', avan.exposicao === null ? '-' : `${(avan.exposicao * 100).toFixed(1)}%`);
+    setText('risco-declividade', parseNumberPtBr(dados.declividade) === null ? '-' : String(parseNumberPtBr(dados.declividade).toFixed(1)));
+    const texturaTxt = String(dados.textura ?? '').trim();
+    setText('risco-textura', texturaTxt === '' ? '-' : texturaTxt);
+  }
+
+  if (sustGrid) {
+    sustGrid.classList.remove('hidden');
+    setText('imc', Number.isFinite(avan.imcScore) ? String(avan.imcScore) : '-');
+    setText('imc-desc', Number.isFinite(avan.imcScore) ? `${avan.imcClasse} | ${avan.imcDesc}` : 'Aguardando cálculo');
+    setText('area-exposta', typeof avan.areaExposta === 'number' ? avan.areaExposta.toFixed(2) : '-');
+    setText('imc-cv', Number.isFinite(dados.cv) ? `${dados.cv.toFixed(1)}%` : '0.0%');
+    setText('imc-range', Number.isFinite(dados.amplitude) ? dados.amplitude.toFixed(3) : '0.000');
+  }
+
+  return avan;
+}
+
+async function buscarDadosClimaticos() {
+  const lat = parseNumberPtBr(document.getElementById('latitude')?.value);
+  const lon = parseNumberPtBr(document.getElementById('longitude')?.value);
+  const inicio = document.getElementById('climaInicio')?.value ?? '';
+  const fim = document.getElementById('climaFim')?.value ?? '';
+
+  if (lat === null || lon === null || !Number.isFinite(lat) || !Number.isFinite(lon)) {
+    mostrarMensagem('Erro: informe latitude e longitude válidas para buscar dados climáticos.', 'error');
+    return;
+  }
+  if (inicio === '' || fim === '') {
+    mostrarMensagem('Erro: informe início e fim do período climático.', 'error');
+    return;
+  }
+
+  try {
+    mostrarMensagem('Buscando dados climáticos (API pública)...', 'success');
+
+    const params = new URLSearchParams({
+      latitude: String(lat),
+      longitude: String(lon),
+      start_date: inicio,
+      end_date: fim,
+      daily: 'precipitation_sum,temperature_2m_mean',
+      timezone: 'America/Sao_Paulo',
+    });
+    const url = `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Falha ao consultar clima (HTTP ${res.status})`);
+    const json = await res.json();
+
+    const precip = (json?.daily?.precipitation_sum || []).map((v) => (Number.isFinite(v) ? v : Number(v)));
+    const tmean = (json?.daily?.temperature_2m_mean || []).map((v) => (Number.isFinite(v) ? v : Number(v)));
+
+    const chuvaTotal = sumArray(precip);
+    const chuva7d = sumLast(precip, 7);
+    const chuva30d = sumLast(precip, 30);
+    const maxDia = precip.length ? Math.max(...precip.filter((v) => Number.isFinite(v))) : null;
+    const tempMedia = avgArray(tmean);
+
+    window.ultimaClima = {
+      latitude: lat,
+      longitude: lon,
+      inicio,
+      fim,
+      chuvaTotal,
+      chuva7d,
+      chuva30d,
+      maxDia,
+      tempMedia,
+      fonte: 'open-meteo',
+      fetchedAt: new Date().toISOString(),
+    };
+
+    if (window.ultimaDados) {
+      window.ultimaDados.latitude = lat;
+      window.ultimaDados.longitude = lon;
+      window.ultimaDados.climaInicio = inicio;
+      window.ultimaDados.climaFim = fim;
+      window.ultimaDados.climaFonte = 'open-meteo';
+      window.ultimaDados.climaChuvaTotalMm = Number.isFinite(chuvaTotal) ? chuvaTotal : null;
+      window.ultimaDados.climaChuva7dMm = Number.isFinite(chuva7d) ? chuva7d : null;
+      window.ultimaDados.climaChuva30dMm = Number.isFinite(chuva30d) ? chuva30d : null;
+      window.ultimaDados.climaChuvaMaxDiaMm = Number.isFinite(maxDia) ? maxDia : null;
+      window.ultimaDados.climaTempMediaC = Number.isFinite(tempMedia) ? tempMedia : null;
+    }
+
+    atualizarBlocosAvancados({
+      ...(window.ultimaDados || {}),
+      climaChuvaTotalMm: Number.isFinite(chuvaTotal) ? chuvaTotal : null,
+      climaChuva7dMm: Number.isFinite(chuva7d) ? chuva7d : null,
+      climaChuva30dMm: Number.isFinite(chuva30d) ? chuva30d : null,
+      climaChuvaMaxDiaMm: Number.isFinite(maxDia) ? maxDia : null,
+    });
+
+    mostrarMensagem('✓ Dados climáticos carregados e integrados à análise.', 'success');
+  } catch (err) {
+    console.error('Erro ao buscar clima:', err);
+    mostrarMensagem(`Erro ao buscar clima: ${err?.message || err}`, 'error');
+  }
+}
+
 function calcular() {
   const numEl = document.getElementById('numLeituras');
   if (!numEl) return;
@@ -424,6 +698,9 @@ function calcular() {
   const soma = leituras.reduce((a, b) => a + b, 0);
   const media = soma / num;
   const percentual = media * 100;
+
+  const textura = document.getElementById('textura')?.value ?? '';
+  const declividade = document.getElementById('declividade')?.value ?? '';
 
   // Calibração opcional: A_campo e áreas (m²)
   let areaCampo = null;
@@ -548,6 +825,27 @@ function calcular() {
 
   mostrarMensagem('✓ Análise concluída com sucesso!', 'success');
 
+  const climaAtivo = window.ultimaClima || null;
+  const climaChuvaTotalMm = climaAtivo && Number.isFinite(climaAtivo.chuvaTotal) ? climaAtivo.chuvaTotal : null;
+  const climaChuva7dMm = climaAtivo && Number.isFinite(climaAtivo.chuva7d) ? climaAtivo.chuva7d : null;
+  const climaChuva30dMm = climaAtivo && Number.isFinite(climaAtivo.chuva30d) ? climaAtivo.chuva30d : null;
+  const climaChuvaMaxDiaMm = climaAtivo && Number.isFinite(climaAtivo.maxDia) ? climaAtivo.maxDia : null;
+  const climaTempMediaC = climaAtivo && Number.isFinite(climaAtivo.tempMedia) ? climaAtivo.tempMedia : null;
+
+  const avanPreview = atualizarBlocosAvancados({
+    media,
+    cv,
+    amplitude,
+    areaCampo,
+    chuva: document.getElementById('chuva')?.value,
+    textura,
+    declividade,
+    climaChuvaTotalMm,
+    climaChuva7dMm,
+    climaChuva30dMm,
+    climaChuvaMaxDiaMm,
+  });
+
   window.ultimaDados = {
     numLeituras: num,
     somaIcs: soma,
@@ -564,6 +862,27 @@ function calcular() {
     chuva: document.getElementById('chuva').value,
     umidade: document.getElementById('umidade').value,
     notas: document.getElementById('notas').value,
+    textura,
+    declividade,
+    latitude: climaAtivo?.latitude ?? parseNumberPtBr(document.getElementById('latitude')?.value),
+    longitude: climaAtivo?.longitude ?? parseNumberPtBr(document.getElementById('longitude')?.value),
+    climaInicio: document.getElementById('climaInicio')?.value ?? climaAtivo?.inicio ?? '',
+    climaFim: document.getElementById('climaFim')?.value ?? climaAtivo?.fim ?? '',
+    climaFonte: climaAtivo?.fonte ?? '',
+    climaChuvaTotalMm,
+    climaChuva7dMm,
+    climaChuva30dMm,
+    climaChuvaMaxDiaMm,
+    climaTempMediaC,
+    exposicao: avanPreview.exposicao,
+    riscoErosaoScore: avanPreview.riscoScore,
+    riscoErosaoClasse: avanPreview.riscoClasse,
+    riscoErosaoDesc: avanPreview.riscoDesc,
+    imcScore: avanPreview.imcScore,
+    imcClasse: avanPreview.imcClasse,
+    imcDesc: avanPreview.imcDesc,
+    areaExposta: avanPreview.areaExposta,
+    textoClima: avanPreview.textoClima,
     distVisada: document.getElementById('distVisada')?.value ?? '',
     campoModo,
     campoLargura,
@@ -622,6 +941,12 @@ function exportarPDF() {
     hora: document.getElementById('hora')?.value ?? window.ultimaDados.hora,
     operador: document.getElementById('operador')?.value ?? window.ultimaDados.operador,
     area: document.getElementById('area')?.value ?? window.ultimaDados.area, // Unidade Amostral
+    textura: document.getElementById('textura')?.value ?? window.ultimaDados.textura,
+    declividade: document.getElementById('declividade')?.value ?? window.ultimaDados.declividade,
+    latitude: parseNumberPtBr(document.getElementById('latitude')?.value) ?? window.ultimaDados.latitude,
+    longitude: parseNumberPtBr(document.getElementById('longitude')?.value) ?? window.ultimaDados.longitude,
+    climaInicio: document.getElementById('climaInicio')?.value ?? window.ultimaDados.climaInicio,
+    climaFim: document.getElementById('climaFim')?.value ?? window.ultimaDados.climaFim,
     // Clima
     luz: document.getElementById('luz')?.value ?? window.ultimaDados.luz,
     sombra: document.getElementById('sombra')?.value ?? window.ultimaDados.sombra,
@@ -933,6 +1258,41 @@ function exportarPDF() {
     y += rowGenH + 5;
   }
 
+  // Linha extra (opcional): Clima e risco potencial quando disponível
+  {
+    const riscoTxt = Number.isFinite(d.riscoErosaoScore)
+      ? `${d.riscoErosaoScore} (${d.riscoErosaoClasse || ''})`
+      : '-';
+    const exposicaoTxt = Number.isFinite(d.exposicao) ? `${(d.exposicao * 100).toFixed(1)}%` : '-';
+    const chuva7dTxt = Number.isFinite(d.climaChuva7dMm) ? d.climaChuva7dMm.toFixed(1) : '-';
+    const chuva30dTxt = Number.isFinite(d.climaChuva30dMm) ? d.climaChuva30dMm.toFixed(1) : '-';
+
+    const hasLinha1 = (riscoTxt !== '-') || (exposicaoTxt !== '-') || (chuva7dTxt !== '-') || (chuva30dTxt !== '-');
+    if (hasLinha1) {
+      const opts = { labelRatio: 0.68, labelFontSize: 7, valueFontSize: 7 };
+      drawGenBox('Risco erosão', riscoTxt, 0, opts);
+      drawGenBox('Exposição', exposicaoTxt, 1, opts);
+      drawGenBox('Chuva 7d (mm)', chuva7dTxt, 2, opts);
+      drawGenBox('Chuva 30d (mm)', chuva30dTxt, 3, opts);
+      y += rowGenH + 5;
+    }
+
+    const declivTxt = parseNumberPtBr(d.declividade);
+    const declivOut = declivTxt === null ? '-' : declivTxt.toFixed(1);
+    const texturaOut = (String(d.textura ?? '').trim() === '') ? '-' : String(d.textura).trim();
+    const maxDiaTxt = Number.isFinite(d.climaChuvaMaxDiaMm) ? d.climaChuvaMaxDiaMm.toFixed(1) : '-';
+    const tempTxt = Number.isFinite(d.climaTempMediaC) ? d.climaTempMediaC.toFixed(1) : '-';
+    const hasLinha2 = (declivOut !== '-') || (texturaOut !== '-') || (maxDiaTxt !== '-') || (tempTxt !== '-');
+    if (hasLinha2) {
+      const opts2 = { labelRatio: 0.7, labelFontSize: 7, valueFontSize: 7 };
+      drawGenBox('Declividade (%)', declivOut, 0, opts2);
+      drawGenBox('Textura', texturaOut, 1, opts2);
+      drawGenBox('Máx dia (mm)', maxDiaTxt, 2, opts2);
+      drawGenBox('T média (°C)', tempTxt, 3, opts2);
+      y += rowGenH + 5;
+    }
+  }
+
   // ==========================================
   // 4. "DISTRIBUIÇÃO POR CLASSES" (Estilo tabela de sistemas)
   // ==========================================
@@ -1109,6 +1469,18 @@ function limpar() {
   document.getElementById('chuva').value = '';
   document.getElementById('umidade').value = '';
   document.getElementById('notas').value = '';
+  const texturaEl = document.getElementById('textura');
+  if (texturaEl) texturaEl.value = '';
+  const declivEl = document.getElementById('declividade');
+  if (declivEl) declivEl.value = '';
+  const latEl = document.getElementById('latitude');
+  if (latEl) latEl.value = '';
+  const lonEl = document.getElementById('longitude');
+  if (lonEl) lonEl.value = '';
+  const climaIniEl = document.getElementById('climaInicio');
+  if (climaIniEl) climaIniEl.value = '';
+  const climaFimEl = document.getElementById('climaFim');
+  if (climaFimEl) climaFimEl.value = '';
   const distEl = document.getElementById('distVisada');
   if (distEl) distEl.value = '';
   const campoModoEl = document.getElementById('campoModo');
@@ -1120,6 +1492,10 @@ function limpar() {
   document.getElementById('results').classList.add('results-hidden');
   document.getElementById('mensagem').classList.add('hidden');
   document.getElementById('area-results')?.classList?.add('hidden');
+  document.getElementById('clima-results')?.classList?.add('hidden');
+  document.getElementById('risco-results')?.classList?.add('hidden');
+  document.getElementById('sust-results')?.classList?.add('hidden');
+  window.ultimaClima = null;
   setupLeituras();
   setupCampoCalibracao();
 }
@@ -1129,6 +1505,7 @@ window.addEventListener('load', () => {
   const btnCalcular = document.getElementById('btnCalcular');
   const btnExportar = document.getElementById('btnExportarPDF');
   const btnLimpar = document.getElementById('btnLimpar');
+  const btnBuscarClima = document.getElementById('btnBuscarClima');
 
   const campoModoEl = document.getElementById('campoModo');
 
@@ -1179,6 +1556,7 @@ window.addEventListener('load', () => {
   if (btnCalcular) btnCalcular.addEventListener('click', calcular);
   if (btnExportar) btnExportar.addEventListener('click', exportarPDF);
   if (btnLimpar) btnLimpar.addEventListener('click', limpar);
+  if (btnBuscarClima) btnBuscarClima.addEventListener('click', buscarDadosClimaticos);
 
   // Preview da imagem do croqui
   const inputCroqui = document.getElementById('inputCroqui');
@@ -1213,4 +1591,13 @@ window.addEventListener('load', () => {
 
   const dataEl = document.getElementById('data');
   if (dataEl) dataEl.valueAsDate = new Date();
+
+  const climaFimEl = document.getElementById('climaFim');
+  if (climaFimEl) climaFimEl.valueAsDate = new Date();
+  const climaInicioEl = document.getElementById('climaInicio');
+  if (climaInicioEl) {
+    const d0 = new Date();
+    d0.setDate(d0.getDate() - 30);
+    climaInicioEl.valueAsDate = d0;
+  }
 });
