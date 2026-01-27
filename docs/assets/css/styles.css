@@ -68,6 +68,14 @@ header, .header {
   border-bottom: none; /* Override old */
 }
 
+.header-flex {
+  display: flex !important;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
 /* Fix for existing HTML structure using .header */
 .header-top, .brand {
   display: flex;
@@ -114,7 +122,12 @@ nav, .nav {
   gap: 0.5rem;
 }
 
-nav a, .nav a {
+.nav-main {
+  display: flex;
+  gap: 1.5rem;
+}
+
+nav a, .nav a, .nav-link {
   font-size: 0.875rem;
   font-weight: 500;
   padding: 0.5rem 1rem;
@@ -125,9 +138,20 @@ nav a, .nav a {
   background: transparent; /* Override old */
 }
 
-nav a:hover, nav a.active, .nav a:hover {
+.nav-link {
+  border-bottom: 2px solid transparent;
+  padding: 0.5rem 0;
+}
+
+nav a:hover, nav a.active, .nav a:hover, .nav-link:hover {
   background-color: rgba(255, 255, 255, 0.1);
   color: var(--text-inverse);
+}
+
+.nav-link.active {
+  color: var(--text-inverse);
+  border-bottom-color: var(--accent);
+  background: transparent;
 }
 
 /* Content */
@@ -482,3 +506,174 @@ button, .btn {
 /* Retro compatibility helpers */
 .grid { display: grid; gap: 1rem; }
 .card p { color: var(--text-secondary); }
+
+/* Hero Index - Landing Page */
+.main-index {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 3rem 1rem;
+}
+
+.hero-index {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: center;
+  animation: fadeIn 0.5s ease;
+}
+
+.hero-content h2 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+
+.hero-content p {
+  font-size: 1.125rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.cta-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cta-buttons .btn-primary,
+.cta-buttons .btn-secondary {
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+}
+
+.cta-buttons .btn-primary {
+  background-color: var(--accent);
+  color: white;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.cta-buttons .btn-primary:hover {
+  background-color: var(--accent-hover);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.cta-buttons .btn-secondary {
+  background-color: white;
+  color: var(--accent);
+  border: 2px solid var(--accent);
+  transition: all 0.3s ease;
+}
+
+.cta-buttons .btn-secondary:hover {
+  background-color: var(--accent);
+  color: white;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.hero-aside {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  box-shadow: var(--shadow-md);
+}
+
+.hero-aside h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 1.5rem;
+}
+
+.quick-list {
+  list-style: none;
+  margin-bottom: 1.5rem;
+}
+
+.quick-list li {
+  padding: 0.75rem 0;
+  padding-left: 1.75rem;
+  position: relative;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.quick-list li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--success);
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+.info-box {
+  background: #eff6ff;
+  border-left: 4px solid var(--accent);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  color: #1e40af;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+/* Footer Index */
+.footer-index {
+  background-color: var(--primary);
+  color: var(--text-inverse);
+  padding: 2rem 0;
+  margin-top: 4rem;
+  text-align: center;
+}
+
+.footer-index p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+
+/* Responsive - Tablet and Mobile */
+@media (max-width: 768px) {
+  .hero-index {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .hero-content h2 {
+    font-size: 2rem;
+  }
+
+  .cta-buttons {
+    flex-direction: column;
+  }
+
+  .cta-buttons .btn-primary,
+  .cta-buttons .btn-secondary {
+    width: 100%;
+    text-align: center;
+  }
+
+  .header-flex {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .nav-main {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 1rem;
+  }
+
+  .main-index {
+    padding: 2rem 1rem;
+  }
+}
