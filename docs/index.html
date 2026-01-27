@@ -6,6 +6,7 @@
   <title>ICS Analyzer | Página Inicial</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/css/embrapa_theme.css" />
 </head>
 <body>
   <header>
@@ -24,24 +25,50 @@
     </div>
   </header>
 
-  <main class="main-index">
-    <section class="hero-index">
-      <div class="hero-content">
-        <h2>Análise Profissional de Cobertura do Solo</h2>
-        <p>Sistema completo para leitura, cálculo e geração automática de relatórios em PDF</p>
-        <div class="cta-buttons">
-          <a class="btn-primary" href="sistema.html">Executar o Sistema</a>
-          <a class="btn-secondary" href="manual.html">Abrir Manual</a>
+  <main class="main-embrapa">
+    <!-- Banner Hero Section -->
+    <section class="hero-banner">
+      <div class="hero-overlay">
+        <div class="container hero-text">
+          <h2>ICS Analyzer</h2>
+          <p class="lead">Sistema avançado para determinação do Índice de Cobertura do Solo</p>
+          <a class="btn-hero" href="sistema.html">ACESSAR SISTEMA</a>
         </div>
       </div>
-      <div class="hero-aside">
-        <h3>Como funciona</h3>
-        <ul class="quick-list">
-          <li>Preencha os dados do projeto e da coleta</li>
-          <li>Insira as leituras entre 0.00 e 1.00</li>
-          <li>Clique em "Calcular" e depois em "Exportar PDF"</li>
-        </ul>
-        <div class="info-box">ℹ️ O PDF só é liberado após o cálculo.</div>
+    </section>
+
+    <!-- 3 Cards Section (overlapping hero) -->
+    <section class="container features-section">
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="icon-circle">📊</div>
+          <h3>Entrada de Dados</h3>
+          <p>Interface intuitiva para registro de leituras horizontais e verticais em campo.</p>
+        </div>
+        <div class="feature-card active-card">
+          <div class="icon-circle">⚡</div>
+          <h3>Cálculo Automático</h3>
+          <p>Processamento instantâneo do Índice de Cobertura do Solo (ICS) com precisão.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon-circle">📑</div>
+          <h3>Relatório PDF</h3>
+          <p>Geração de relatórios técnicos completos prontos para impressão ou arquivo.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Detailed Content Section -->
+    <section class="container content-section">
+      <div class="content-row">
+        <div class="content-text">
+          <h3>Sobre o Método ICS</h3>
+          <p>O Índice de Cobertura do Solo é uma métrica fundamental para avaliação da proteção do solo contra erosão. Este sistema automatiza o método de interseção, garantindo rapidez e padronização nos resultados.</p>
+        </div>
+        <div class="content-image">
+          <!-- Placeholder for a technical image or chart -->
+           <div class="img-placeholder">ICS Chart Visualization</div>
+        </div>
       </div>
     </section>
   </main>

@@ -1,0 +1,175 @@
+/* Embrapa-inspired Design Implementation */
+
+/* Header Transition for Scroll Effect */
+.header {
+  transition: transform 0.3s ease-in-out;
+}
+
+.header.header-hidden {
+  transform: translateY(-100%);
+}
+
+/* Banner Hero */
+.hero-banner {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  color: white;
+  padding: 6rem 1rem 10rem 1rem; /* Extra padding bottom for overlap */
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-text h2 {
+  font-size: 3rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+}
+
+.hero-text .lead {
+  font-size: 1.25rem;
+  color: #cbd5e1;
+  max-width: 700px;
+  margin: 0 auto 2rem auto;
+}
+
+.btn-hero {
+  display: inline-block;
+  background-color: var(--accent);
+  color: white;
+  padding: 1rem 2.5rem;
+  border-radius: 50px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+}
+
+.btn-hero:hover {
+  background-color: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
+}
+
+/* Features Cards - Overlapping */
+.features-section {
+  margin-top: -5rem; /* Negative margin for overlap */
+  position: relative;
+  z-index: 10;
+  margin-bottom: 4rem;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+.feature-card {
+  background: white;
+  padding: 2rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  transition: transform 0.3s ease;
+  border-top: 4px solid transparent;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+}
+
+.feature-card.active-card {
+  border-top-color: var(--accent);
+}
+
+.icon-circle {
+  width: 60px;
+  height: 60px;
+  background-color: #f1f5f9;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin: 0 auto 1.5rem auto;
+  color: var(--accent);
+}
+
+.active-card .icon-circle {
+  background-color: #eff6ff; /* Light blue */
+  color: var(--accent);
+}
+
+.feature-card h3 {
+  color: var(--primary);
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.feature-card p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+/* Content Section */
+.content-section {
+  padding: 4rem 1rem;
+}
+
+.content-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: center;
+}
+
+.content-text h3 {
+  font-size: 2rem;
+  color: var(--primary);
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.content-text h3::after {
+  content: '';
+  display: block;
+  width: 60px;
+  height: 4px;
+  background: var(--accent);
+  margin-top: 0.5rem;
+  border-radius: 2px;
+}
+
+.img-placeholder {
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  border-radius: var(--radius-lg);
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+/* Mobile Responsiveness for New Design */
+@media (max-width: 900px) {
+  .features-grid {
+    grid-template-columns: 1fr; /* Stack cards */
+    gap: 1.5rem;
+  }
+  
+  .content-row {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  .hero-text h2 {
+    font-size: 2rem;
+  }
+  
+  .features-section {
+    margin-top: -3rem;
+  }
+}
