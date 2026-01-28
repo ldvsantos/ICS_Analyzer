@@ -87,7 +87,6 @@
               <label for="fuzzy-model">Modelo fuzzy:</label>
               <select id="fuzzy-model">
                 <option value="operational" selected>Diagnóstico operacional (6 variáveis)</option>
-                <option value="ispc">ISPC triangular (15 variáveis; escala 0–10)</option>
                 <option value="ispc_reduced">ISPC reduzido (10 variáveis; estima 5; escala 0–10)</option>
               </select>
             </div>
@@ -127,72 +126,6 @@
           </div>
 
           <p class="lt-muted-2">Você pode preencher apenas o que tiver. Campos vazios são ignorados na inferência.</p>
-          </div>
-
-          <div id="fuzzy-fields-ispc" class="lt-hidden">
-            <div class="grid lt-grid-spacer">
-              <div class="form-group">
-                <label for="ispc-dmg">DMG:</label>
-                <input type="text" id="ispc-dmg" placeholder="Exemplo 1,2">
-              </div>
-              <div class="form-group">
-                <label for="ispc-dmp">DMP:</label>
-                <input type="text" id="ispc-dmp" placeholder="Exemplo 0,8">
-              </div>
-              <div class="form-group">
-                <label for="ispc-rmp">RMP:</label>
-                <input type="text" id="ispc-rmp" placeholder="Exemplo 0,5">
-              </div>
-              <div class="form-group">
-                <label for="ispc-densidade">Densidade:</label>
-                <input type="text" id="ispc-densidade" placeholder="Exemplo 1,35">
-              </div>
-              <div class="form-group">
-                <label for="ispc-estoque-c">Estoque de C:</label>
-                <input type="text" id="ispc-estoque-c" placeholder="Exemplo 2,1">
-              </div>
-              <div class="form-group">
-                <label for="ispc-na">Na:</label>
-                <input type="text" id="ispc-na" placeholder="Exemplo 5">
-              </div>
-              <div class="form-group">
-                <label for="ispc-icv">ICV (%):</label>
-                <input type="text" id="ispc-icv" placeholder="Exemplo 0,3">
-              </div>
-              <div class="form-group">
-                <label for="ispc-altura">Altura de Plantas:</label>
-                <input type="text" id="ispc-altura" placeholder="Exemplo 2,0">
-              </div>
-              <div class="form-group">
-                <label for="ispc-diam-espiga">Diâmetro espiga:</label>
-                <input type="text" id="ispc-diam-espiga" placeholder="Exemplo 48">
-              </div>
-              <div class="form-group">
-                <label for="ispc-comp-espiga">Comprimento espiga:</label>
-                <input type="text" id="ispc-comp-espiga" placeholder="Exemplo 20">
-              </div>
-              <div class="form-group">
-                <label for="ispc-n-plantas">Número de plantas/ha:</label>
-                <input type="text" id="ispc-n-plantas" placeholder="Exemplo 15000">
-              </div>
-              <div class="form-group">
-                <label for="ispc-n-espigas">N total de espigas/ha:</label>
-                <input type="text" id="ispc-n-espigas" placeholder="Exemplo 15000">
-              </div>
-              <div class="form-group">
-                <label for="ispc-n-espigas-com">N de espigas comerciais/ha:</label>
-                <input type="text" id="ispc-n-espigas-com" placeholder="Exemplo 8000">
-              </div>
-              <div class="form-group">
-                <label for="ispc-peso-espigas">Peso de espigas comerciais/ha:</label>
-                <input type="text" id="ispc-peso-espigas" placeholder="Exemplo 1500">
-              </div>
-              <div class="form-group">
-                <label for="ispc-produtividade">Produtividade:</label>
-                <input type="text" id="ispc-produtividade" placeholder="Exemplo 8000">
-              </div>
-            </div>
-            <p class="lt-muted-2">No ISPC, as 15 variáveis são necessárias para calcular o índice. O sistema normaliza automaticamente para 0–10 e aplica o modelo triangular.</p>
           </div>
 
           <div id="fuzzy-fields-ispc-reduced" class="lt-hidden">
@@ -238,7 +171,7 @@
                 <input type="text" id="ispcR-produtividade" placeholder="Exemplo 8000">
               </div>
             </div>
-            <p class="lt-muted-2">No ISPC reduzido, o sistema estima automaticamente: <strong>DMP</strong>, <strong>RMP</strong>, <strong>Densidade</strong>, <strong>N de espigas comerciais/ha</strong> e <strong>Peso de espigas comerciais/ha</strong> (calibração 0–10 cm). Para máxima fidelidade, use o modo completo (15 variáveis).</p>
+            <p class="lt-muted-2">No ISPC reduzido, o sistema estima automaticamente: <strong>DMP</strong>, <strong>RMP</strong>, <strong>Densidade</strong>, <strong>N de espigas comerciais/ha</strong> e <strong>Peso de espigas comerciais/ha</strong> (calibração 0–10 cm).</p>
           </div>
         </div>
       </div>

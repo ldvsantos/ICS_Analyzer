@@ -68,6 +68,11 @@ def load_excel_sheet(path: Path, sheet: str) -> pd.DataFrame:
     return df
 
 
+def load_csv(path: Path) -> pd.DataFrame:
+    df = pd.read_csv(path)
+    return df
+
+
 def standardize_from_excel(df: pd.DataFrame) -> pd.DataFrame:
     missing = [c.raw for c in ISPC_COLS if c.raw not in df.columns]
     if missing:
@@ -76,6 +81,30 @@ def standardize_from_excel(df: pd.DataFrame) -> pd.DataFrame:
     out = df[[c.raw for c in ISPC_COLS]].copy()
     rename = {c.raw: c.key for c in ISPC_COLS}
     out = out.rename(columns=rename)
+
+    for k in ISPC_FEATURE_KEYS:
+        out[k] = pd.to_numeric(out[k], errors="coerce")
+
+    return out
+
+
+def standardize_from_csv(df: pd.DataFrame) -> pd.DataFrame:
+    # Aceita CSV já padronizado (keys) ou com cabeçalhos "raw" (como no Excel)
+    key_cols = [c.key for c in ISPC_COLS]
+    raw_cols = [c.raw for c in ISPC_COLS]
+
+    if all(c in df.columns for c in key_cols):
+        out = df[key_cols].copy()
+    elif all(c in df.columns for c in raw_cols):
+        out = standardize_from_excel(df)
+    else:
+        missing_keys = [c for c in key_cols if c not in df.columns]
+        missing_raw = [c for c in raw_cols if c not in df.columns]
+        raise ValueError(
+            "CSV não tem colunas suficientes. "
+            f"Faltando (formato padronizado): {missing_keys}; "
+            f"faltando (formato Excel): {missing_raw}"
+        )
 
     for k in ISPC_FEATURE_KEYS:
         out[k] = pd.to_numeric(out[k], errors="coerce")
@@ -213,6 +242,7 @@ def build_reduction_report(pairs: list[dict], clusters: list[set[str]], depth: s
 def main() -> None:
     parser = argparse.ArgumentParser(description="Pipeline de organização e auditoria do banco ISPC.")
     parser.add_argument("--excel", type=str, help="Caminho para banco_dados.xlsx")
+    parser.add_argument("--csv", type=str, help="Caminho para CSV mestre (recomendado para histórico com coluna ano)")
     parser.add_argument("--sheet", type=str, default="dados_010", help="Aba do Excel (ex.: dados_010, dados_1020)")
     parser.add_argument("--out", type=str, default=str(Path("data") / "ispc"), help="Diretório de saída")
     parser.add_argument("--ano", type=int, default=None, help="Ano (opcional). Se informado, entra na coluna ano")
@@ -222,22 +252,58 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    if not args.excel:
-        raise SystemExit("Informe --excel com o caminho do banco_dados.xlsx")
+    if bool(args.excel) == bool(args.csv):
+        raise SystemExit("Informe exatamente uma fonte de dados: --excel OU --csv")
 
-    excel_path = Path(args.excel)
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     depth = args.profundidade or parse_depth_from_sheet(args.sheet)
 
-    df_raw = load_excel_sheet(excel_path, args.sheet)
-    df = standardize_from_excel(df_raw)
+    if args.excel:
+        excel_path = Path(args.excel)
+        df_raw = load_excel_sheet(excel_path, args.sheet)
+        df = standardize_from_excel(df_raw)
+        suffix = args.sheet
 
-    df.insert(0, "ano", args.ano if args.ano is not None else "")
-    df.insert(1, "profundidade_cm", depth if depth else "")
+        df.insert(0, "ano", args.ano if args.ano is not None else "")
+        df.insert(1, "profundidade_cm", depth if depth else "")
+    else:
+        csv_path = Path(args.csv)
+        df_raw = load_csv(csv_path)
 
-    suffix = args.sheet
+        # Se o CSV já tiver ano/profundidade, preserva.
+        # Se não tiver, cria. Se tiver e o usuário passou --ano/--profundidade,
+        # preenche apenas valores vazios.
+        if "ano" not in df_raw.columns:
+            df_raw.insert(0, "ano", args.ano if args.ano is not None else "")
+        elif args.ano is not None:
+            df_raw["ano"] = df_raw["ano"].replace("", pd.NA).fillna(args.ano)
+
+        if "profundidade_cm" not in df_raw.columns:
+            df_raw.insert(1, "profundidade_cm", depth if depth else "")
+        elif depth:
+            df_raw["profundidade_cm"] = df_raw["profundidade_cm"].replace("", pd.NA).fillna(depth)
+
+        df = standardize_from_csv(df_raw)
+
+        # Re-anexar colunas de identificação no início
+        meta_cols = []
+        for meta in ["ano", "profundidade_cm"]:
+            if meta in df_raw.columns:
+                meta_cols.append(meta)
+        df = pd.concat([df_raw[meta_cols].copy(), df], axis=1)
+
+        suffix = csv_path.stem
+        if suffix.startswith("ispc_records_"):
+            suffix = suffix[len("ispc_records_") :]
+
+        # Se o CSV tiver profundidade única, usa no relatório
+        if "profundidade_cm" in df.columns:
+            vals = df["profundidade_cm"].dropna().astype(str)
+            uniq = sorted(set(v for v in vals.tolist() if v.strip() != ""))
+            if len(uniq) == 1 and not depth:
+                depth = uniq[0]
     records_path = out_dir / f"ispc_records_{suffix}.csv"
     df.to_csv(records_path, index=False, quoting=csv.QUOTE_MINIMAL)
 

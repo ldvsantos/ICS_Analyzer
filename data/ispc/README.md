@@ -28,6 +28,12 @@ Entradas do ISPC (numéricas):
 ## Como atualizar com novos anos
 1. Copie o template `template_ispc_records.csv`.
 2. Acrescente as linhas do novo ano (preenchendo `ano`, `profundidade_cm`, `parcela`, `cultura` e as 15 variáveis).
-3. Rode o pipeline em `tools/ispc_pipeline.py` apontando para o arquivo consolidado.
+3. Rode o pipeline em `tools/ispc_pipeline.py` apontando para o CSV mestre.
+
+Exemplos:
+- A partir do CSV mestre (recomendado):
+    - `python tools/ispc_pipeline.py --csv data/ispc/ispc_records_mestre.csv --out data/ispc`
+- A partir do Excel (quando não houver coluna `ano`):
+    - `python tools/ispc_pipeline.py --excel caminho/para/banco_dados.xlsx --sheet dados_010 --ano 2024 --out data/ispc`
 
 > Observação: o Excel atual (banco_dados.xlsx) não traz `ano`. Para histórico anual, a recomendação é consolidar em um CSV mestre com coluna `ano`.
