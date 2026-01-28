@@ -189,8 +189,10 @@ function calcularIQS(dados) {
         }
       };
       enableFuzzyEl.addEventListener('change', sync);
+      enableFuzzyEl.addEventListener('input', sync);
       if (fuzzyModelEl) {
         fuzzyModelEl.addEventListener('change', sync);
+        fuzzyModelEl.addEventListener('input', sync);
       }
       sync();
     }
