@@ -52,6 +52,20 @@
     gap: 0.5rem;
   }
 
+  /* Manual page uses a plain <nav> (no .nav class) */
+  body.manual-page header nav {
+    width: 100%;
+    max-width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  body.manual-page header nav a {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+
   /* Landing page specific: let main be full width; sections handle containers */
   .main-embrapa {
     max-width: none;
