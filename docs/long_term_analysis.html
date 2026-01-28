@@ -15,6 +15,7 @@
   <script src="assets/js/ics_analyzer_sq_calc.js" defer></script>
   <script src="assets/js/ics_analyzer_charts.js" defer></script>
   <script src="assets/js/ics_analyzer_pdf_lt.js" defer></script>
+  <script src="assets/js/ics_analyzer_fuzzy.js" defer></script>
   <script src="assets/js/app.js" defer></script>
 </head>
 <body>
@@ -69,6 +70,54 @@
         <input type="number" id="years" min="1" max="50" value="22">
       </div>
 
+      <div class="card" style="margin-top: 14px;">
+        <div class="section-title">Dados do usuário (opcional)</div>
+        <p style="color: #555; margin-top: 8px;">Quando informado, o sistema estima uma prioridade operacional por inferência fuzzy, explicando quais variáveis ativaram a recomendação.</p>
+
+        <div class="form-group" style="margin-top: 10px;">
+          <label style="display:flex; gap:10px; align-items:center;">
+            <input type="checkbox" id="enable-fuzzy">
+            Usar diagnóstico fuzzy com dados do talhão
+          </label>
+        </div>
+
+        <div id="fuzzy-fields" style="display:none;">
+          <div class="grid" style="margin-top: 12px;">
+            <div class="form-group">
+              <label for="user-coverage">Cobertura superficial estimada (%):</label>
+              <input type="text" id="user-coverage" placeholder="Exemplo 65">
+            </div>
+
+            <div class="form-group">
+              <label for="user-slope">Declividade (%):</label>
+              <input type="text" id="user-slope" placeholder="Exemplo 6">
+            </div>
+
+            <div class="form-group">
+              <label for="user-infiltration">Infiltração (mm/h):</label>
+              <input type="text" id="user-infiltration" placeholder="Exemplo 18">
+            </div>
+
+            <div class="form-group">
+              <label for="user-om">Matéria orgânica (%):</label>
+              <input type="text" id="user-om" placeholder="Exemplo 2,8">
+            </div>
+
+            <div class="form-group">
+              <label for="user-bd">Densidade do solo (g/cm³):</label>
+              <input type="text" id="user-bd" placeholder="Exemplo 1,35">
+            </div>
+
+            <div class="form-group">
+              <label for="user-agg">Estabilidade de agregados (%):</label>
+              <input type="text" id="user-agg" placeholder="Exemplo 70">
+            </div>
+          </div>
+
+          <p style="color:#666; margin-top: 10px;">Você pode preencher apenas o que tiver. Campos vazios são ignorados na inferência.</p>
+        </div>
+      </div>
+
       <button id="calculate-btn" class="btn">Calcular Índice SQ</button>
     </section>
 
@@ -82,6 +131,19 @@
       <div class="card" style="margin-bottom: 16px;">
         <div class="section-title">Recomendações</div>
         <ul id="recommendations" style="padding-left: 18px;"></ul>
+      </div>
+
+      <div class="card" style="margin-bottom: 16px; display:none;" id="fuzzy-card">
+        <div class="section-title">Diagnóstico operacional (fuzzy)</div>
+        <div class="result-hint" style="color: #555;">Prioridade operacional estimada a partir dos dados do talhão e regras fuzzy.</div>
+        <div style="margin-top: 10px;">
+          <div style="font-weight: 700; color: #1b5e20; font-size: 18px;" id="fuzzy-result">Indeterminado</div>
+          <div style="color:#666; margin-top: 6px;" id="fuzzy-explain"></div>
+        </div>
+        <div style="margin-top: 10px;">
+          <div class="section-title" style="margin-bottom: 8px;">Recomendações por gatilho</div>
+          <ul id="fuzzy-recommendations" style="padding-left: 18px;"></ul>
+        </div>
       </div>
       <div class="chart-row">
         <div class="chart-container">

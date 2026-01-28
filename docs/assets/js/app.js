@@ -97,6 +97,14 @@ function calcularIQS(dados) {
 (function () {
   let lastReportData = null;
 
+  function parseNumberPtBR(raw) {
+    const s = String(raw ?? '').trim();
+    if (!s) return null;
+    const normalized = s.replace(/\s+/g, '').replace(',', '.');
+    const v = Number.parseFloat(normalized);
+    return Number.isFinite(v) ? v : null;
+  }
+
   function formatNumberPtBR(value) {
     if (!Number.isFinite(value)) return '';
     try {
@@ -152,6 +160,21 @@ function calcularIQS(dados) {
     const resultsSection = document.getElementById('results-section');
     const pdfBtn = document.getElementById('generate-pdf');
 
+    const enableFuzzyEl = document.getElementById('enable-fuzzy');
+    const fuzzyFieldsEl = document.getElementById('fuzzy-fields');
+    const fuzzyCardEl = document.getElementById('fuzzy-card');
+    const fuzzyResultEl = document.getElementById('fuzzy-result');
+    const fuzzyExplainEl = document.getElementById('fuzzy-explain');
+    const fuzzyRecListEl = document.getElementById('fuzzy-recommendations');
+
+    if (enableFuzzyEl && fuzzyFieldsEl) {
+      const sync = () => {
+        fuzzyFieldsEl.style.display = enableFuzzyEl.checked ? 'block' : 'none';
+      };
+      enableFuzzyEl.addEventListener('change', sync);
+      sync();
+    }
+
     calculateBtn.addEventListener('click', () => {
       try {
         const tillage = document.getElementById('tillage-system').value;
@@ -178,6 +201,63 @@ function calcularIQS(dados) {
           });
         }
 
+        let fuzzyPayload = null;
+        if (typeof window !== 'undefined' && window.ICS_Fuzzy && typeof window.ICS_Fuzzy.evaluate === 'function') {
+          const cov = parseNumberPtBR(document.getElementById('user-coverage')?.value);
+          const slope = parseNumberPtBR(document.getElementById('user-slope')?.value);
+          const infil = parseNumberPtBR(document.getElementById('user-infiltration')?.value);
+          const om = parseNumberPtBR(document.getElementById('user-om')?.value);
+          const bd = parseNumberPtBR(document.getElementById('user-bd')?.value);
+          const agg = parseNumberPtBR(document.getElementById('user-agg')?.value);
+
+          const anyField = [cov, slope, infil, om, bd, agg].some((v) => v !== null);
+          const enabled = Boolean(enableFuzzyEl && enableFuzzyEl.checked);
+
+          if (enabled || anyField) {
+            fuzzyPayload = window.ICS_Fuzzy.evaluate({
+              coveragePct: cov,
+              slopePct: slope,
+              infiltrationMmH: infil,
+              organicMatterPct: om,
+              bulkDensity: bd,
+              aggregateStabilityPct: agg
+            });
+
+            if (fuzzyCardEl) {
+              fuzzyCardEl.style.display = 'block';
+            }
+
+            if (fuzzyResultEl) {
+              const scoreTxt = Number.isFinite(fuzzyPayload.priorityScore) ? ` (${formatNumberPtBR(fuzzyPayload.priorityScore)}/100)` : '';
+              fuzzyResultEl.textContent = `Prioridade ${fuzzyPayload.priorityLabel}${scoreTxt}`;
+            }
+
+            if (fuzzyExplainEl) {
+              if (fuzzyPayload.drivers && fuzzyPayload.drivers.length) {
+                const top = fuzzyPayload.drivers
+                  .map((d) => `${d.tag}`)
+                  .join('; ');
+                fuzzyExplainEl.textContent = `Gatilhos dominantes: ${top}.`;
+              } else {
+                fuzzyExplainEl.textContent = 'Sem gatilhos dominantes com os dados informados.';
+              }
+            }
+
+            if (fuzzyRecListEl) {
+              fuzzyRecListEl.innerHTML = '';
+              (fuzzyPayload.recommendations || []).forEach((rec) => {
+                const li = document.createElement('li');
+                li.textContent = rec;
+                fuzzyRecListEl.appendChild(li);
+              });
+            }
+          } else if (fuzzyCardEl) {
+            fuzzyCardEl.style.display = 'none';
+          }
+        } else if (fuzzyCardEl) {
+          fuzzyCardEl.style.display = 'none';
+        }
+
         const chartData = buildChartData(tillage, crop, years);
         if (chartData && typeof window.renderHistoricalCharts === 'function') {
           window.renderHistoricalCharts(chartData);
@@ -196,7 +276,8 @@ function calcularIQS(dados) {
             crop,
             sq: chartData ? chartData.sqValues[idx] : sq
           })),
-          conclusions: recommendations.join('\n')
+          conclusions: recommendations.join('\n'),
+          fuzzy: fuzzyPayload
         };
       } catch (error) {
         console.error(error);
