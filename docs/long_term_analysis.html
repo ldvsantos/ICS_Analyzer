@@ -1,22 +1,138 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Análise de Longo Prazo - ICS Analyzer</title>
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="stylesheet" href="assets/css/styles.css?v=2026-01-28-1">
+  <link rel="stylesheet" href="assets/css/embrapa_theme.css?v=2026-01-28-1">
+  <link rel="stylesheet" href="assets/css/mobile.css?v=2026-01-28-1" media="(max-width: 1024px)">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+  <script src="assets/js/ics_analyzer_research_coefficients.js" defer></script>
+  <script src="assets/js/ics_analyzer_calc.js" defer></script>
+  <script src="assets/js/ics_analyzer_charts.js" defer></script>
+  <script src="assets/js/ics_analyzer_pdf_lt.js" defer></script>
+  <script src="assets/js/app.js" defer></script>
+</head>
+<body>
+  <header>
+    <div class="container header-flex">
+      <div class="brand">
+        <img src="assets/img/logo.png" alt="Logo ICS" style="height: 50px; background: rgba(255, 255, 255, 0); padding: 2px; border-radius: 4px;">
+        <div>
+          <h1>ICS Analyzer</h1>
+          <p>Análise de longo prazo da qualidade do solo</p>
+        </div>
+      </div>
+      <nav class="nav-main">
+        <a href="index.html" class="nav-link">Início</a>
+        <a href="manual.html" class="nav-link">Manual</a>
+        <a href="sistema.html" class="nav-link">Sistema</a>
+        <a href="long_term_analysis.html" class="nav-link active">Análise de Longo Prazo</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main-embrapa">
+    <section class="container" style="margin-top: 24px;">
+      <h2>Análise de Longo Prazo da Qualidade do Solo</h2>
+      <p class="lead">Baseado em pesquisa de 22 anos (Jussimara et al, 2026)</p>
+    </section>
+
+    <section class="container" id="input-section">
+      <h2>Parâmetros de Análise</h2>
+      <div class="form-group">
+        <label for="tillage-system">Sistema de Preparo:</label>
+        <select id="tillage-system">
+          <option value="CT">Convencional (CT)</option>
+          <option value="MT">Mínimo (MT)</option>
+          <option value="NT" selected>Plantio Direto (NT)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="previous-crop">Cultura Anterior:</label>
+        <select id="previous-crop">
+          <option value="Cowpea">Feijão-caupi</option>
+          <option value="Pigeon Pea">Guandu</option>
+          <option value="Sunn Hemp">Crotalária</option>
+          <option value="Pearl Millet" selected>Milheto</option>
+          <option value="Control">Controle</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="years">Anos de Manejo:</label>
+        <input type="number" id="years" min="1" max="50" value="22">
+      </div>
+
+      <button id="calculate-btn" class="btn">Calcular Índice SQ</button>
+    </section>
+
+    <section class="container" id="results-section" style="display:none;">
+      <h2>Resultados</h2>
+      <div class="card" style="margin-bottom: 16px;">
+        <div class="section-title">Índice SQ</div>
+        <div class="result-value" style="font-size: 32px; font-weight: 700; color: #1b5e20;" id="sq-result">0,00</div>
+        <div class="result-hint" style="color: #555;">Resultados calculados com base nos coeficientes do estudo de longo prazo.</div>
+      </div>
+      <div class="card" style="margin-bottom: 16px;">
+        <div class="section-title">Recomendações</div>
+        <ul id="recommendations" style="padding-left: 18px;"></ul>
+      </div>
+      <div class="chart-row">
+        <div class="chart-container">
+          <canvas id="sq-chart"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="tillage-chart"></canvas>
+        </div>
+      </div>
+      <button id="generate-pdf" class="btn">Gerar Relatório PDF</button>
+    </section>
+
+    <section class="container" id="research-section">
+      <h2>Base Científica</h2>
+      <p>Estudo realizado por 22 anos em solo argiloso avaliando sistemas de preparo, culturas anteriores e parâmetros físicos e estruturais do solo.</p>
+      <blockquote>
+        "Sistemas conservacionistas (MT/NT) mantiveram qualidade estrutural superior
+        mesmo após 22 anos de cultivo contínuo."
+      </blockquote>
+    </section>
+  </main>
+
+  <footer class="container" style="margin-top: 32px;">
+    <p>ICS Analyzer &copy; 2026 | Módulo de Análise de Longo Prazo</p>
+  </footer>
+</body>
+</html><!DOCTYPE html>
+<html lang="pt-BR">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Análise de Longo Prazo - ICS Analyzer</title>
     <link rel="stylesheet" href="assets/css/styles.css">
+    <title>Análise de Longo Prazo - ICS Analyzer</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="assets/css/styles.css?v=2026-01-28-1">
+    <link rel="stylesheet" href="assets/css/embrapa_theme.css?v=2026-01-28-1">
+    <link rel="stylesheet" href="assets/css/mobile.css?v=2026-01-28-1" media="(max-width: 1024px)">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="assets/js/app.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <script src="assets/js/ics_analyzer_research_coefficients.js" defer></script>
     <script src="assets/js/ics_analyzer_calc.js" defer></script>
     <script src="assets/js/ics_analyzer_charts.js" defer></script>
     <script src="assets/js/ics_analyzer_pdf_lt.js" defer></script>
-</head>
-<body>
+    <script src="assets/js/app.js" defer></script>
     <header>
         <h1>Análise de Longo Prazo da Qualidade do Solo</h1>
+        <p>ICS Analyzer</p>
+        <h1>Análise de Longo Prazo da Qualidade do Solo</h1>
         <p>Baseado em pesquisa de 22 anos (Jussimara et al, 2026)</p>
-    </header>
-
     <main class="container">
         <section id="input-section">
             <h2>Parâmetros de Análise</h2>
@@ -46,7 +162,7 @@
             </div>
             
             <button id="calculate-btn" class="btn">Calcular Índice SQ</button>
-        </section>
+            <button id="calculate-btn" class="btn">Calcular Índice SQ</button>
         
         <section id="results-section" style="display:none;">
             <h2>Resultados</h2>
@@ -78,6 +194,8 @@
 
     <footer>
         <p>ICS Analyzer &copy; 2026 | Módulo de Análise de Longo Prazo</p>
-    </footer>
+        <footer class="container" style="margin-top: 32px;">
+            <p>ICS Analyzer &copy; 2026 | Módulo de Análise de Longo Prazo</p>
+        </footer>
 </body>
 </html>

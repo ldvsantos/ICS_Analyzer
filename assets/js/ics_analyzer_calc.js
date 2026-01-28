@@ -1,5 +1,17 @@
 // Módulo principal de cálculos do ICS Analyzer
-const researchCoeffs = require('./ics_analyzer_research_coefficients');
+function getResearchCoeffs() {
+  if (typeof ICSResearchCoefficients !== 'undefined') {
+    return ICSResearchCoefficients;
+  }
+  if (typeof require === 'function') {
+    try {
+      return require('./ics_analyzer_research_coefficients');
+    } catch (error) {
+      return null;
+    }
+  }
+  return null;
+}
 
 class ICS_Calculator {
   constructor() {
@@ -7,6 +19,8 @@ class ICS_Calculator {
       sqIndex: null,
       recommendations: []
     };
+    this.results.tillageSystem = null;
+    this.researchCoeffs = getResearchCoeffs();
   }
 
   /**
@@ -16,7 +30,11 @@ class ICS_Calculator {
    * @param {number} years - Anos de manejo
    */
   calculateSQ(tillageSystem, previousCrop, years) {
-    this.results.sqIndex = researchCoeffs.getSQ(
+    if (!this.researchCoeffs) {
+      throw new Error('Coeficientes de pesquisa indisponíveis');
+    }
+    this.results.tillageSystem = tillageSystem.toUpperCase();
+    this.results.sqIndex = this.researchCoeffs.getSQ(
       tillageSystem.toUpperCase(), 
       previousCrop, 
       years
@@ -59,4 +77,8 @@ class ICS_Calculator {
   }
 }
 
-module.exports = ICS_Calculator;
+if (typeof module === 'object' && module.exports) {
+  module.exports = ICS_Calculator;
+} else if (typeof window !== 'undefined') {
+  window.ICS_Calculator = ICS_Calculator;
+}

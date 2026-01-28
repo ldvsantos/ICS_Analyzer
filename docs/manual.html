@@ -17,10 +17,11 @@
           <p>Manual de uso (campo → sistema → relatório) — atualizado em 28/01/2026</p>
         </div>
       </div>
-      <nav>
-        <a href="index.html">Início</a>
-        <a class="active" href="manual.html">Manual</a>
-        <a href="sistema.html">Executar Sistema</a>
+      <nav class="nav-main">
+        <a href="index.html" class="nav-link">Início</a>
+        <a href="manual.html" class="nav-link active">Manual</a>
+        <a href="sistema.html" class="nav-link">Sistema</a>
+        <a href="long_term_analysis.html" class="nav-link">Análise de Longo Prazo</a>
       </nav>
     </div>
   </header>
@@ -34,25 +35,15 @@
           <strong>lançamento no sistema</strong> e <strong>interpretação dos resultados</strong>.
         </p>
 
-        <div class="manual-callout" role="note">
-          <div class="manual-callout-title">Fórmula usada pelo sistema</div>
-          <div class="manual-callout-body">
-            Em cada ponto <span class="manual-mono">i</span>, o índice pontual é calculado como
-            <span class="manual-mono">ICS_i = H_i × V_i</span>, com classes discretas de <span class="manual-mono">0,0</span> a <span class="manual-mono">1,0</span> (passo <span class="manual-mono">0,2</span>).
-          </div>
-        </div>
+        <p class="manual-muted" style="margin-top: 10px;">
+          O <strong>ICS Analyzer</strong> foi feito para registrar as leituras de campo (H e V), calcular automaticamente os resultados e
+          gerar um relatório em PDF com rastreabilidade (metadados, condições ambientais e estatísticas).
+        </p>
 
         <div class="button-group" style="margin-top: 14px;">
-          <a class="btn" href="sistema.html">Abrir o Sistema</a>
           <a class="btn btn-secondary" href="#sumario">Ir para o Sumário</a>
+          <a class="btn" href="sistema.html">Abrir o Sistema</a>
         </div>
-      </div>
-
-      <div>
-        <figure class="manual-figure">
-          <img src="assets/img/aparato_exemplo.png" alt="Exemplo do aparato em uso no campo" loading="lazy">
-          <figcaption>Exemplo de uso do aparato em campo (posicionamento e estabilidade).</figcaption>
-        </figure>
       </div>
     </section>
 
@@ -73,6 +64,13 @@
         <a href="#exemplo-completo">12) Exemplo completo (cálculo manual)</a>
         <a href="#checklist-imprimivel">13) Checklist imprimível (1 página)</a>
       </div>
+    </section>
+
+    <section class="manual-section" aria-label="Figura de apoio">
+      <figure class="manual-figure">
+        <img src="assets/img/aparato_exemplo.png" alt="Exemplo do aparato em uso no campo" loading="lazy">
+        <figcaption>Exemplo de uso do aparato em campo (posicionamento e estabilidade).</figcaption>
+      </figure>
     </section>
 
     <section id="visao-geral" class="manual-section">
