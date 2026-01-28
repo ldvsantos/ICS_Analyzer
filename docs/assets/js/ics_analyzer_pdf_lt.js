@@ -14,21 +14,66 @@
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    doc.setFontSize(16);
-    doc.text('Relatório de Análise Conservacionista', 105, 15, null, null, 'center');
-    doc.setFontSize(12);
-    doc.setTextColor(100);
-    doc.text(`Período analisado: ${data.startYear} - ${data.endYear}`, 105, 25, null, null, 'center');
+    const pageW = (doc.internal && doc.internal.pageSize && typeof doc.internal.pageSize.getWidth === 'function')
+      ? doc.internal.pageSize.getWidth()
+      : 210;
+
+    const mLeft = 15;
+    const mRight = 15;
+    const contentW = pageW - mLeft - mRight;
+    let y = 12;
+
+    // Cabeçalho (faixa + logo + título)
+    const headerH = 24;
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.2);
+    doc.rect(mLeft, y, contentW, headerH, 'FD');
+    doc.setDrawColor(30, 58, 138);
+    doc.setLineWidth(0.8);
+    doc.line(mLeft, y + headerH, pageW - mRight, y + headerH);
+
+    const logoImg = document.getElementById('logo-for-pdf');
+    let logoWFinal = 0;
+    if (logoImg && logoImg.complete && logoImg.naturalHeight > 0) {
+      const maxH = 14;
+      const maxW = 22;
+      const ratio = logoImg.naturalHeight / logoImg.naturalWidth;
+      let logoW = maxW;
+      let logoH = logoW * ratio;
+      if (logoH > maxH) {
+        logoH = maxH;
+        logoW = logoH / ratio;
+      }
+      const logoX = mLeft + 4;
+      const logoY = y + (headerH - logoH) / 2;
+      doc.addImage(logoImg, 'PNG', logoX, logoY, logoW, logoH);
+      logoWFinal = logoW;
+    }
+
+    const titleX = mLeft + 4 + (logoWFinal ? (logoWFinal + 6) : 0);
+    doc.setTextColor(15, 23, 42);
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(13);
+    doc.text('Relatório — Análise Conservacionista (SQ e fuzzy)', titleX, y + 10);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.setFontSize(10);
+    doc.text(`Período analisado: ${data.startYear}–${data.endYear}`, titleX, y + 17);
+
+    y += headerH + 10;
 
     const chartCanvas = document.getElementById('sq-chart');
     if (chartCanvas) {
       const chartImg = chartCanvas.toDataURL('image/png');
-      doc.addImage(chartImg, 'PNG', 15, 40, 180, 80);
+      doc.addImage(chartImg, 'PNG', mLeft, y, contentW, 80);
     }
+
+    y += 90;
 
     doc.setFontSize(14);
     doc.setTextColor(0);
-    doc.text('Resumo Quantitativo', 15, 130);
+    doc.text('Resumo Quantitativo', mLeft, y);
 
     const headers = [['Ano', 'Sistema de Preparo', 'Cultura', 'SQ']];
     const rows = data.results.map(item => [
@@ -40,7 +85,7 @@
 
     if (doc.autoTable) {
       doc.autoTable({
-        startY: 135,
+        startY: y + 5,
         head: headers,
         body: rows,
         theme: 'grid',
@@ -48,14 +93,14 @@
       });
     }
 
-    const finalY = doc.autoTable && doc.autoTable.previous ? doc.autoTable.previous.finalY : 135;
+    const finalY = doc.autoTable && doc.autoTable.previous ? doc.autoTable.previous.finalY : (y + 5);
     doc.setFontSize(14);
-    doc.text('Conclusões e Recomendações', 15, finalY + 15);
+    doc.text('Conclusões e Recomendações', mLeft, finalY + 15);
     doc.setFontSize(11);
     doc.setTextColor(40);
     const conclusions = data.conclusions.split('\n');
     conclusions.forEach((line, i) => {
-      doc.text(line, 15, finalY + 25 + (i * 7));
+      doc.text(line, mLeft, finalY + 25 + (i * 7));
     });
 
     const afterConclusionsY = finalY + 25 + (conclusions.length * 7) + 8;
@@ -68,20 +113,20 @@
 
       doc.setFontSize(14);
       doc.setTextColor(0);
-      doc.text('Diagnóstico operacional (fuzzy)', 15, y);
+      doc.text('Diagnóstico operacional (fuzzy)', mLeft, y);
       y += 8;
 
       doc.setFontSize(11);
       doc.setTextColor(40);
       const scoreTxt = Number.isFinite(data.fuzzy.priorityScore) ? data.fuzzy.priorityScore.toFixed(2) : 'Indeterminado';
       const labelTxt = data.fuzzy.priorityLabel ? String(data.fuzzy.priorityLabel) : 'Indeterminado';
-      doc.text(`Prioridade: ${labelTxt} (${scoreTxt}/100)`, 15, y);
+      doc.text(`Prioridade: ${labelTxt} (${scoreTxt}/100)`, mLeft, y);
       y += 7;
 
       if (data.fuzzy.drivers && data.fuzzy.drivers.length) {
         const driversTxt = data.fuzzy.drivers.map((d) => d.tag).join(' | ');
-        const splitDrivers = doc.splitTextToSize(`Gatilhos dominantes: ${driversTxt}`, 180);
-        doc.text(splitDrivers, 15, y);
+        const splitDrivers = doc.splitTextToSize(`Gatilhos dominantes: ${driversTxt}`, contentW);
+        doc.text(splitDrivers, mLeft, y);
         y += splitDrivers.length * 6;
       }
 
@@ -95,20 +140,20 @@
         if (Number.isFinite(iu.bulkDensity)) parts.push(`Densidade: ${iu.bulkDensity} g/cm³`);
         if (Number.isFinite(iu.aggregateStabilityPct)) parts.push(`Agregados: ${iu.aggregateStabilityPct}%`);
         if (parts.length) {
-          const splitInputs = doc.splitTextToSize(`Entradas utilizadas: ${parts.join(' | ')}`, 180);
-          doc.text(splitInputs, 15, y);
+          const splitInputs = doc.splitTextToSize(`Entradas utilizadas: ${parts.join(' | ')}`, contentW);
+          doc.text(splitInputs, mLeft, y);
           y += splitInputs.length * 6;
         }
       }
 
       if (data.fuzzy.recommendations && data.fuzzy.recommendations.length) {
         const recTxt = data.fuzzy.recommendations.map((r) => `- ${r}`).join('\n');
-        const splitRecs = doc.splitTextToSize(`Recomendações por gatilho\n${recTxt}`, 180);
+        const splitRecs = doc.splitTextToSize(`Recomendações por gatilho\n${recTxt}`, contentW);
         if (y + splitRecs.length * 6 > 280) {
           doc.addPage();
           y = 20;
         }
-        doc.text(splitRecs, 15, y);
+        doc.text(splitRecs, mLeft, y);
       }
     }
 

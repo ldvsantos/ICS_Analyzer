@@ -136,38 +136,60 @@ function exportarPDF() {
     const contentW = pageW - mLeft - mRight; // 190
     let y = 10;
 
+    const formatDatePtBr = (isoDate) => {
+      if (!isoDate) return '-';
+      const dt = new Date(String(isoDate));
+      if (!Number.isFinite(dt.getTime())) return String(isoDate);
+      return dt.toLocaleDateString('pt-BR');
+    };
+
+    const formatTimePtBr = (hhmm) => {
+      if (!hhmm) return '-';
+      const s = String(hhmm);
+      // aceita HH:MM ou HH:MM:SS
+      const m = s.match(/^\d{1,2}:\d{2}/);
+      return m ? m[0] : s;
+    };
+
     // ==========================================
     // 1. CABEÇALHO (Logo + Títulos)
     // ==========================================
 
-    // Tenta pegar a imagem do DOM (adicionada no HTML)
+    // Fundo do cabeçalho (faixa suave + linha de destaque)
+    const headerH = 26;
+    doc.setFillColor(248, 250, 252); // slate-50
+    doc.setDrawColor(226, 232, 240); // slate-200
+    doc.setLineWidth(0.2);
+    doc.rect(mLeft, y, contentW, headerH, 'FD');
+
+    doc.setDrawColor(30, 58, 138); // blue-900-ish
+    doc.setLineWidth(0.8);
+    doc.line(mLeft, y + headerH, pageW - mRight, y + headerH);
+
+    // Logo (à esquerda)
     const logoImg = document.getElementById('logo-for-pdf');
     let logoAdicionado = false;
+    let logoWFinal = 0;
 
     if (logoImg) {
       try {
         if (logoImg.complete && logoImg.naturalHeight > 0) {
-          // Ajuste de Logo: Limitar altura e largura
-          const maxW = 30;
-          const maxH = 25; // Altura máxima para não invadir a linha
+          const maxH = 16;
+          const maxW = 26;
+          const ratio = logoImg.naturalHeight / logoImg.naturalWidth;
 
           let logoW = maxW;
-          const ratio = logoImg.naturalHeight / logoImg.naturalWidth;
           let logoH = logoW * ratio;
-
-          // Se altura estourar, redimensiona pela altura
           if (logoH > maxH) {
             logoH = maxH;
             logoW = logoH / ratio;
           }
 
-          // Centralizar verticalmente no espaço reservado de 30mm
-          // Espaço Header = 30mm. Meio = 15mm.
-          // Posição Y = y + (30 - logoH)/2
-          const logoY = y + (30 - logoH) / 2;
-
-          doc.addImage(logoImg, 'PNG', mLeft, logoY, logoW, logoH);
+          const logoX = mLeft + 4;
+          const logoY = y + (headerH - logoH) / 2;
+          doc.addImage(logoImg, 'PNG', logoX, logoY, logoW, logoH);
           logoAdicionado = true;
+          logoWFinal = logoW;
         } else {
           console.warn('Logo existe mas não está carregado (complete=false).');
         }
@@ -176,34 +198,39 @@ function exportarPDF() {
       }
     }
 
-    // Se a imagem falhar, desenha o texto substituto
+    // Fallback: marca textual
     if (!logoAdicionado) {
-      doc.setFontSize(22);
       doc.setFont(undefined, 'bold');
-      doc.setTextColor(40, 40, 40);
-      doc.text('ICS', mLeft, y + 15);
-      doc.setFontSize(10);
-      doc.text('Analyzer', mLeft, y + 20);
+      doc.setTextColor(30, 41, 59);
+      doc.setFontSize(14);
+      doc.text('ICS Analyzer', mLeft + 4, y + 10);
+      logoWFinal = 20;
     }
 
-    // Título Principal (Direita/Centro)
-    const titleX = mLeft + 40;
-    doc.setFontSize(16);
+    // Título / subtítulo
+    const titleX = mLeft + 4 + logoWFinal + 6;
+    doc.setTextColor(15, 23, 42);
     doc.setFont(undefined, 'bold');
-    // Ajustado Y para centralizar melhor no bloco aumentado
-    doc.text('SISTEMA DE ANÁLISE DE COBERTURA DE SOLO', titleX, y + 12);
-
-    doc.setFontSize(12);
+    doc.setFontSize(13);
+    doc.text('Relatório Técnico — Índice de Cobertura do Solo (ICS)', titleX, y + 11);
     doc.setFont(undefined, 'normal');
-    doc.text('RELATÓRIO TÉCNICO - ÍNDICE DE COBERTURA (ICS)', titleX, y + 20);
+    doc.setTextColor(71, 85, 105);
+    doc.setFontSize(10);
+    doc.text('Registro de campo, metadados, condições ambientais e estatísticas', titleX, y + 18);
 
-    y += 32; // Espaço aumentado para cabeçalho (era 22) para evitar sobreposição
+    // Metadados à direita
+    const rightX = pageW - mRight - 3;
+    doc.setFontSize(8.5);
+    doc.setTextColor(71, 85, 105);
+    const linha1 = `Projeto: ${String(d.projeto || '-').slice(0, 60)}`;
+    const linha2 = `Unidade: ${String(d.area || '-').slice(0, 40)}  •  Data/Hora: ${formatDatePtBr(d.data)} ${formatTimePtBr(d.hora)}`;
+    doc.text(linha1, rightX, y + 9, { align: 'right' });
+    doc.text(linha2, rightX, y + 16, { align: 'right' });
 
-    // Linha grossa separadora
-    doc.setLineWidth(0.5);
+    y += headerH + 6;
+
+    // Reset de estilos para não "vazar" a cor do cabeçalho para os boxes
     doc.setDrawColor(0);
-    doc.line(mLeft, y, pageW - mRight, y);
-    y += 2;
 
     // ==========================================
     // 2. BOX "DADOS CADASTRAIS / PROJETO"
