@@ -19,6 +19,29 @@
   }
 
   function trimf(x, a, b, c) {
+    // Triangular MF com suporte a "ombro" quando a==b (ombro esquerdo)
+    // ou b==c (ombro direito). Isso é necessário para parâmetros como
+    // (0,0,5) e (5,10,10) usados no seu modelo em R.
+    if (!Number.isFinite(x) || !Number.isFinite(a) || !Number.isFinite(b) || !Number.isFinite(c)) return 0;
+
+    // Degenerado
+    if (a === b && b === c) return x === a ? 1 : 0;
+
+    // Ombro esquerdo
+    if (a === b) {
+      if (x <= a) return 1;
+      if (x >= c) return 0;
+      return (c - x) / (c - b);
+    }
+
+    // Ombro direito
+    if (b === c) {
+      if (x >= c) return 1;
+      if (x <= a) return 0;
+      return (x - a) / (b - a);
+    }
+
+    // Triângulo padrão
     if (x <= a) return 0;
     if (x >= c) return 0;
     if (x === b) return 1;
@@ -26,9 +49,247 @@
     return (c - x) / (c - b);
   }
 
+  function clamp(x, min, max) {
+    return Math.max(min, Math.min(max, x));
+  }
+
   function normalizeInput(v, min, max) {
     if (!Number.isFinite(v)) return null;
     return Math.max(min, Math.min(max, v));
+  }
+
+  // ---------------------------------------------------------------------------
+  // ISPC (modelo do seu script R "Fuzzy triangular.R")
+  // - 15 entradas normalizadas para 0..10 por min-max global
+  // - normalização invertida para RMP, Densidade e Na
+  // - funções de pertinência triangulares iguais para todas as variáveis
+  // - base de regras com pesos ajustados a partir de Produtividade, Estoque de C,
+  //   Densidade e ICV
+  // - defuzzificação por centróide
+  // ---------------------------------------------------------------------------
+
+  const ISPC_MINMAX = {
+    dmg: { min: -0.6469518616592149, max: 6.298769999112172, invert: false },
+    dmp: { min: -1.0085651234574193, max: 3.1530982246592427, invert: false },
+    rmp: { min: -0.8191146707798682, max: 3.774827417705909, invert: true },
+    densidade: { min: -1.2798731637867655, max: 4.786040977084525, invert: true },
+    estoque_c: { min: -1.0541501752988582, max: 5.684333651659117, invert: false },
+    na: { min: 0.7, max: 45.3, invert: true },
+    icv: { min: -2.9500916541857793, max: 1.6590084585897358, invert: false },
+    altura: { min: 1.5, max: 2.4, invert: false },
+    diam_espiga: { min: 39.4, max: 57.6, invert: false },
+    comp_espiga: { min: 15.6, max: 25.6, invert: false },
+    n_plantas: { min: 10833.333333333334, max: 20166.666666666668, invert: false },
+    n_espigas: { min: 9333.333333333334, max: 20666.666666666668, invert: false },
+    n_espigas_com: { min: 1833.3333333333333, max: 13833.333333333334, invert: false },
+    peso_espigas: { min: 366.6666666666667, max: 3500.0, invert: false },
+    produtividade: { min: 1833.3333333333333, max: 13833.333333333334, invert: false }
+  };
+
+  const ISPC_INPUT_ORDER = [
+    'dmg',
+    'dmp',
+    'rmp',
+    'densidade',
+    'estoque_c',
+    'na',
+    'icv',
+    'altura',
+    'diam_espiga',
+    'comp_espiga',
+    'n_plantas',
+    'n_espigas',
+    'n_espigas_com',
+    'peso_espigas',
+    'produtividade'
+  ];
+
+  function normalizeISPCValue(rawValue, spec) {
+    // No script R, NA dispara retorno conservador em 5 na escala 0..10.
+    if (!Number.isFinite(rawValue)) return 5;
+    const minVal = spec.min;
+    const maxVal = spec.max;
+    if (!Number.isFinite(minVal) || !Number.isFinite(maxVal)) return 5;
+    const denom = maxVal - minVal;
+    if (Math.abs(denom) < 1e-12) return 5;
+    const x = spec.invert ? (10 * (maxVal - rawValue) / denom) : (10 * (rawValue - minVal) / denom);
+    return clamp(x, 0, 10);
+  }
+
+  function ispcMFs(x) {
+    // baixa: (0,0,5) | media: (0,5,10) | alta: (5,10,10)
+    return {
+      baixa: trimf(x, 0, 0, 5),
+      media: trimf(x, 0, 5, 10),
+      alta: trimf(x, 5, 10, 10)
+    };
+  }
+
+  function ispcOutBaixa(y) {
+    return trimf(y, 0, 0, 5);
+  }
+
+  function ispcOutMedia(y) {
+    return trimf(y, 0, 5, 10);
+  }
+
+  function ispcOutAlta(y) {
+    return trimf(y, 5, 10, 10);
+  }
+
+  function ispcClass(score0to10) {
+    if (!Number.isFinite(score0to10)) return { label: 'Indeterminado', className: 'na' };
+    if (score0to10 <= 3.3) return { label: 'Baixa', className: 'low' };
+    if (score0to10 <= 6.6) return { label: 'Média', className: 'medium' };
+    return { label: 'Alta', className: 'high' };
+  }
+
+  function centroidRange(agg, minY, maxY, step) {
+    const dx = step || 0.1;
+    let num = 0;
+    let den = 0;
+    for (let y = minY; y <= maxY; y += dx) {
+      const mu = agg(y);
+      num += y * mu;
+      den += mu;
+    }
+    if (den === 0) return null;
+    return num / den;
+  }
+
+  function buildISPCRules() {
+    // Estrutura por linha: 15 antecedentes (1 baixa, 2 media, 3 alta),
+    // saída (1 baixa, 2 media, 3 alta), peso, conector (1 AND)
+    const base = [
+      [1, 2, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.8, 1],
+      [2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1.0, 1],
+      [3, 2, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1.2, 1],
+      [3, 2, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1.1, 1],
+      [3, 2, 2, 3, 1, 3, 1, 3, 3, 3, 3, 3, 3, 3, 3, 2, 0.8, 1],
+      [2, 2, 2, 3, 1, 3, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0.9, 1],
+      [2, 2, 2, 2, 3, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1.2, 1],
+      [1, 2, 2, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1.2, 1],
+      [3, 2, 2, 3, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 2, 0.8, 1],
+      [2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1.2, 1],
+      [2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 1, 0.8, 1],
+      [2, 2, 2, 1, 3, 2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 3, 1.2, 1],
+      [1, 2, 2, 3, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 1.2, 1],
+      [2, 2, 3, 2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1.2, 1],
+      [2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1.2, 1],
+      [1, 2, 3, 3, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 1, 0.7, 1],
+      [2, 2, 1, 1, 3, 2, 3, 1, 1, 1, 1, 1, 1, 1, 1, 2, 0.9, 1],
+      [3, 2, 3, 3, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.8, 1],
+      [1, 2, 2, 2, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 3, 1.0, 1],
+      [2, 2, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0.8, 1],
+      [3, 2, 1, 1, 2, 1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 2, 0.9, 1]
+    ];
+
+    // Ajuste do peso conforme o script R (coluna 15 produtividade, 5 estoque_c, 4 densidade, 7 icv)
+    const out = base.map((r) => r.slice());
+    for (const r of out) {
+      const dens = r[3];
+      const estc = r[4];
+      const icv = r[6];
+      const prod = r[14];
+
+      let peso = 1.0;
+
+      if (prod === 3) peso += 0.5;
+      if (estc === 3) peso += 1.0;
+      if (icv === 3) peso += 0.5;
+
+      if (prod === 1) peso -= 0.5;
+      if (dens === 1) peso -= 1.0;
+      if (estc === 1) peso -= 0.5;
+      if (icv === 1) peso -= 0.5;
+
+      if (dens === 3) peso += 0.5;
+
+      r[16] = clamp(peso, 0.6, 1.5);
+    }
+    return out;
+  }
+
+  const ISPC_RULES = buildISPCRules();
+
+  function evaluateISPC(rawInputs) {
+    const raw = rawInputs || {};
+    const normalized = {};
+    const mfs = {};
+    const missingRawInputs = [];
+
+    for (const key of ISPC_INPUT_ORDER) {
+      const spec = ISPC_MINMAX[key];
+      if (!Number.isFinite(raw[key])) missingRawInputs.push(key);
+      const v = normalizeISPCValue(raw[key], spec);
+      normalized[key] = v;
+      mfs[key] = ispcMFs(v);
+    }
+
+    // No pipeline original em R, linhas com NA normalmente eram removidas antes da inferência.
+    // Aqui, para manter robustez e transparência, exigimos as 15 entradas para produzir score.
+    if (missingRawInputs.length) {
+      return {
+        score: null,
+        classLabel: 'Indeterminado',
+        className: 'na',
+        normalizedInputs: normalized,
+        topRules: [],
+        missingRawInputs
+      };
+    }
+
+    const mfByIndex = (obj, idx) => {
+      if (idx === 1) return obj.baixa;
+      if (idx === 2) return obj.media;
+      return obj.alta;
+    };
+
+    const fired = [];
+
+    for (let i = 0; i < ISPC_RULES.length; i += 1) {
+      const rule = ISPC_RULES[i];
+      const outIdx = rule[15];
+      const weight = rule[16];
+
+      let strength = 1;
+      for (let j = 0; j < ISPC_INPUT_ORDER.length; j += 1) {
+        const key = ISPC_INPUT_ORDER[j];
+        const termIdx = rule[j];
+        const mu = mfByIndex(mfs[key], termIdx);
+        strength = Math.min(strength, mu);
+        if (strength <= 1e-9) break;
+      }
+
+      strength = strength * weight;
+      if (strength > 1e-6) fired.push({ idx: i + 1, strength, outIdx, weight });
+    }
+
+    const aggOut = (y) => {
+      let mu = 0;
+      for (const r of fired) {
+        const outMu = (r.outIdx === 1) ? ispcOutBaixa(y) : (r.outIdx === 2) ? ispcOutMedia(y) : ispcOutAlta(y);
+        mu = Math.max(mu, Math.min(r.strength, outMu));
+      }
+      return clamp01(mu);
+    };
+
+    const score = fired.length ? centroidRange(aggOut, 0, 10, 0.05) : null;
+    const cls = ispcClass(score);
+
+    const topRules = fired
+      .slice()
+      .sort((a, b) => b.strength - a.strength)
+      .slice(0, 5);
+
+    return {
+      score,
+      classLabel: cls.label,
+      className: cls.className,
+      normalizedInputs: normalized,
+      topRules,
+      missingRawInputs
+    };
   }
 
   function membershipCoverage(pct) {
@@ -267,6 +528,7 @@
   }
 
   return {
-    evaluate
+    evaluate,
+    evaluateISPC
   };
 });

@@ -1,4 +1,4 @@
-// Módulo de cálculo de SQ para análise de longo prazo
+// Módulo de cálculo de SQ para Análise Conservacionista
 function getResearchCoeffs() {
   if (typeof ICSResearchCoefficients !== 'undefined') {
     return ICSResearchCoefficients;

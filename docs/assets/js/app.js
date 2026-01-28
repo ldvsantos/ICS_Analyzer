@@ -92,7 +92,7 @@ function calcularIQS(dados) {
   ).toFixed(2);
 }
 
-// ================ ANÁLISE DE LONGO PRAZO (SQ) ================ //
+// ================ Análise Conservacionista (SQ) ================ //
 
 (function () {
   let lastReportData = null;
@@ -162,7 +162,12 @@ function calcularIQS(dados) {
 
     const enableFuzzyEl = document.getElementById('enable-fuzzy');
     const fuzzyFieldsEl = document.getElementById('fuzzy-fields');
+    const fuzzyModelEl = document.getElementById('fuzzy-model');
+    const fuzzyOperationalWrapEl = document.getElementById('fuzzy-fields-operational');
+    const fuzzyISPCWrapEl = document.getElementById('fuzzy-fields-ispc');
     const fuzzyCardEl = document.getElementById('fuzzy-card');
+    const fuzzyTitleEl = document.getElementById('fuzzy-card-title');
+    const fuzzyHintEl = document.getElementById('fuzzy-card-hint');
     const fuzzyResultEl = document.getElementById('fuzzy-result');
     const fuzzyExplainEl = document.getElementById('fuzzy-explain');
     const fuzzyRecListEl = document.getElementById('fuzzy-recommendations');
@@ -170,8 +175,19 @@ function calcularIQS(dados) {
     if (enableFuzzyEl && fuzzyFieldsEl) {
       const sync = () => {
         fuzzyFieldsEl.classList.toggle('lt-hidden', !enableFuzzyEl.checked);
+
+        const mode = fuzzyModelEl ? String(fuzzyModelEl.value) : 'operational';
+        if (fuzzyOperationalWrapEl) {
+          fuzzyOperationalWrapEl.classList.toggle('lt-hidden', mode !== 'operational');
+        }
+        if (fuzzyISPCWrapEl) {
+          fuzzyISPCWrapEl.classList.toggle('lt-hidden', mode !== 'ispc');
+        }
       };
       enableFuzzyEl.addEventListener('change', sync);
+      if (fuzzyModelEl) {
+        fuzzyModelEl.addEventListener('change', sync);
+      }
       sync();
     }
 
@@ -201,58 +217,139 @@ function calcularIQS(dados) {
           });
         }
 
-        let fuzzyPayload = null;
-        if (typeof window !== 'undefined' && window.ICS_Fuzzy && typeof window.ICS_Fuzzy.evaluate === 'function') {
-          const cov = parseNumberPtBR(document.getElementById('user-coverage')?.value);
-          const slope = parseNumberPtBR(document.getElementById('user-slope')?.value);
-          const infil = parseNumberPtBR(document.getElementById('user-infiltration')?.value);
-          const om = parseNumberPtBR(document.getElementById('user-om')?.value);
-          const bd = parseNumberPtBR(document.getElementById('user-bd')?.value);
-          const agg = parseNumberPtBR(document.getElementById('user-agg')?.value);
+        let fuzzyOperationalPayload = null;
+        let fuzzyISPCPayload = null;
 
-          const anyField = [cov, slope, infil, om, bd, agg].some((v) => v !== null);
+        const fuzzy = (typeof window !== 'undefined') ? window.ICS_Fuzzy : null;
+        const mode = fuzzyModelEl ? String(fuzzyModelEl.value) : 'operational';
+
+        if (fuzzy && ((mode === 'operational' && typeof fuzzy.evaluate === 'function') || (mode === 'ispc' && typeof fuzzy.evaluateISPC === 'function'))) {
           const enabled = Boolean(enableFuzzyEl && enableFuzzyEl.checked);
 
-          if (enabled || anyField) {
-            fuzzyPayload = window.ICS_Fuzzy.evaluate({
-              coveragePct: cov,
-              slopePct: slope,
-              infiltrationMmH: infil,
-              organicMatterPct: om,
-              bulkDensity: bd,
-              aggregateStabilityPct: agg
-            });
+          if (mode === 'operational') {
+            const cov = parseNumberPtBR(document.getElementById('user-coverage')?.value);
+            const slope = parseNumberPtBR(document.getElementById('user-slope')?.value);
+            const infil = parseNumberPtBR(document.getElementById('user-infiltration')?.value);
+            const om = parseNumberPtBR(document.getElementById('user-om')?.value);
+            const bd = parseNumberPtBR(document.getElementById('user-bd')?.value);
+            const agg = parseNumberPtBR(document.getElementById('user-agg')?.value);
 
-            if (fuzzyCardEl) {
-              fuzzyCardEl.classList.remove('lt-hidden');
-            }
-
-            if (fuzzyResultEl) {
-              const scoreTxt = Number.isFinite(fuzzyPayload.priorityScore) ? ` (${formatNumberPtBR(fuzzyPayload.priorityScore)}/100)` : '';
-              fuzzyResultEl.textContent = `Prioridade ${fuzzyPayload.priorityLabel}${scoreTxt}`;
-            }
-
-            if (fuzzyExplainEl) {
-              if (fuzzyPayload.drivers && fuzzyPayload.drivers.length) {
-                const top = fuzzyPayload.drivers
-                  .map((d) => `${d.tag}`)
-                  .join('; ');
-                fuzzyExplainEl.textContent = `Gatilhos dominantes: ${top}.`;
-              } else {
-                fuzzyExplainEl.textContent = 'Sem gatilhos dominantes com os dados informados.';
-              }
-            }
-
-            if (fuzzyRecListEl) {
-              fuzzyRecListEl.innerHTML = '';
-              (fuzzyPayload.recommendations || []).forEach((rec) => {
-                const li = document.createElement('li');
-                li.textContent = rec;
-                fuzzyRecListEl.appendChild(li);
+            const anyField = [cov, slope, infil, om, bd, agg].some((v) => v !== null);
+            if (enabled || anyField) {
+              fuzzyOperationalPayload = fuzzy.evaluate({
+                coveragePct: cov,
+                slopePct: slope,
+                infiltrationMmH: infil,
+                organicMatterPct: om,
+                bulkDensity: bd,
+                aggregateStabilityPct: agg
               });
+
+              if (fuzzyTitleEl) fuzzyTitleEl.textContent = 'Diagnóstico operacional (fuzzy)';
+              if (fuzzyHintEl) fuzzyHintEl.textContent = 'Prioridade operacional estimada a partir dos dados do talhão e regras fuzzy.';
+
+              if (fuzzyCardEl) fuzzyCardEl.classList.remove('lt-hidden');
+
+              if (fuzzyResultEl) {
+                const scoreTxt = Number.isFinite(fuzzyOperationalPayload.priorityScore) ? ` (${formatNumberPtBR(fuzzyOperationalPayload.priorityScore)}/100)` : '';
+                fuzzyResultEl.textContent = `Prioridade ${fuzzyOperationalPayload.priorityLabel}${scoreTxt}`;
+              }
+
+              if (fuzzyExplainEl) {
+                if (fuzzyOperationalPayload.drivers && fuzzyOperationalPayload.drivers.length) {
+                  const top = fuzzyOperationalPayload.drivers
+                    .map((d) => `${d.tag}`)
+                    .join('; ');
+                  fuzzyExplainEl.textContent = `Gatilhos dominantes: ${top}.`;
+                } else {
+                  fuzzyExplainEl.textContent = 'Sem gatilhos dominantes com os dados informados.';
+                }
+              }
+
+              if (fuzzyRecListEl) {
+                fuzzyRecListEl.innerHTML = '';
+                (fuzzyOperationalPayload.recommendations || []).forEach((rec) => {
+                  const li = document.createElement('li');
+                  li.textContent = rec;
+                  fuzzyRecListEl.appendChild(li);
+                });
+              }
+            } else if (fuzzyCardEl) {
+              fuzzyCardEl.classList.add('lt-hidden');
             }
-          } else if (fuzzyCardEl) {
-            fuzzyCardEl.classList.add('lt-hidden');
+          }
+
+          if (mode === 'ispc') {
+            const read = (id) => parseNumberPtBR(document.getElementById(id)?.value);
+            const rawInputs = {
+              dmg: read('ispc-dmg'),
+              dmp: read('ispc-dmp'),
+              rmp: read('ispc-rmp'),
+              densidade: read('ispc-densidade'),
+              estoque_c: read('ispc-estoque-c'),
+              na: read('ispc-na'),
+              icv: read('ispc-icv'),
+              altura: read('ispc-altura'),
+              diam_espiga: read('ispc-diam-espiga'),
+              comp_espiga: read('ispc-comp-espiga'),
+              n_plantas: read('ispc-n-plantas'),
+              n_espigas: read('ispc-n-espigas'),
+              n_espigas_com: read('ispc-n-espigas-com'),
+              peso_espigas: read('ispc-peso-espigas'),
+              produtividade: read('ispc-produtividade')
+            };
+
+            const anyField = Object.values(rawInputs).some((v) => v !== null);
+            if (enabled || anyField) {
+              fuzzyISPCPayload = fuzzy.evaluateISPC(rawInputs);
+
+              if (fuzzyTitleEl) fuzzyTitleEl.textContent = 'ISPC triangular (fuzzy)';
+              if (fuzzyHintEl) fuzzyHintEl.textContent = 'Índice ISPC (0–10) estimado a partir das 15 variáveis e do modelo triangular.';
+
+              if (fuzzyCardEl) fuzzyCardEl.classList.remove('lt-hidden');
+
+              if (fuzzyResultEl) {
+                if (Number.isFinite(fuzzyISPCPayload.score)) {
+                  fuzzyResultEl.textContent = `ISPC ${fuzzyISPCPayload.classLabel} (${formatNumberPtBR(fuzzyISPCPayload.score)}/10)`;
+                } else {
+                  fuzzyResultEl.textContent = 'Indeterminado';
+                }
+              }
+
+              if (fuzzyExplainEl) {
+                if (fuzzyISPCPayload.missingRawInputs && fuzzyISPCPayload.missingRawInputs.length) {
+                  fuzzyExplainEl.textContent = `Faltam entradas para calcular: ${fuzzyISPCPayload.missingRawInputs.join(', ')}.`;
+                } else if (fuzzyISPCPayload.topRules && fuzzyISPCPayload.topRules.length) {
+                  const rs = fuzzyISPCPayload.topRules
+                    .map((r) => `R${r.idx} (força ${formatNumberPtBR(r.strength)})`)
+                    .join(' | ');
+                  fuzzyExplainEl.textContent = `Regras mais ativadas: ${rs}.`;
+                } else {
+                  fuzzyExplainEl.textContent = 'Sem regras ativadas com os dados informados.';
+                }
+              }
+
+              if (fuzzyRecListEl) {
+                fuzzyRecListEl.innerHTML = '';
+                if (fuzzyISPCPayload.missingRawInputs && fuzzyISPCPayload.missingRawInputs.length) {
+                  const li = document.createElement('li');
+                  li.textContent = 'Preencha todas as 15 variáveis para obter o ISPC.';
+                  fuzzyRecListEl.appendChild(li);
+                } else {
+                  const li = document.createElement('li');
+                  li.textContent = 'Modelo ISPC: use o PDF para registrar entradas e score.';
+                  fuzzyRecListEl.appendChild(li);
+                }
+              }
+
+              // Anexar entradas brutas para exportação
+              fuzzyISPCPayload = {
+                ...fuzzyISPCPayload,
+                rawInputs
+              };
+            } else if (fuzzyCardEl) {
+              fuzzyCardEl.classList.add('lt-hidden');
+            }
           }
         } else if (fuzzyCardEl) {
           fuzzyCardEl.classList.add('lt-hidden');
@@ -277,7 +374,10 @@ function calcularIQS(dados) {
             sq: chartData ? chartData.sqValues[idx] : sq
           })),
           conclusions: recommendations.join('\n'),
-          fuzzy: fuzzyPayload
+          // Compatibilidade: mantemos data.fuzzy com o operacional
+          fuzzy: fuzzyOperationalPayload,
+          fuzzyOperational: fuzzyOperationalPayload,
+          fuzzyISPC: fuzzyISPCPayload
         };
       } catch (error) {
         console.error(error);

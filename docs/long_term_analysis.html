@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Análise de Longo Prazo - ICS Analyzer</title>
+  <title>Análise Conservacionista - ICS Analyzer</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="stylesheet" href="assets/css/styles.css?v=2026-01-28-1">
   <link rel="stylesheet" href="assets/css/embrapa_theme.css?v=2026-01-28-1">
@@ -25,22 +25,22 @@
         <img src="assets/img/logo.png" alt="Logo ICS" style="height: 50px; background: rgba(255, 255, 255, 0); padding: 2px; border-radius: 4px;">
         <div>
           <h1>ICS Analyzer</h1>
-          <p>Análise de longo prazo da qualidade do solo</p>
+          <p>Análise Conservacionista da qualidade do solo</p>
         </div>
       </div>
       <nav class="nav-main">
         <a href="index.html" class="nav-link">Início</a>
         <a href="manual.html" class="nav-link">Manual</a>
         <a href="sistema.html" class="nav-link">Análises</a>
-        <a href="long_term_analysis.html" class="nav-link active">Análise de Longo Prazo</a>
+        <a href="long_term_analysis.html" class="nav-link active">Análise Conservacionista</a>
       </nav>
     </div>
   </header>
 
   <main class="main-embrapa">
     <section class="container" style="margin-top: 24px;">
-      <h2>Análise de Longo Prazo da Qualidade do Solo</h2>
-      <p class="lead">Baseado em pesquisa de 22 anos (Jussimara et al, 2026)</p>
+      <h2>Análise Conservacionista da Qualidade do Solo</h2>
+      <p class="lead">Baseado em pesquisa de longo prazo (22 anos)</p>
     </section>
 
     <section class="container" id="input-section">
@@ -71,7 +71,7 @@
       </div>
 
       <div class="card lt-card">
-        <div class="section-title">Dados do usuário (opcional)</div>
+        <div class="section-title">Análise de Dados do Talhão (opcional)</div>
         <p class="lt-muted">Quando informado, o sistema estima uma prioridade operacional por inferência fuzzy, explicando quais variáveis ativaram a recomendação.</p>
 
         <div class="form-group lt-form-spacer">
@@ -82,6 +82,17 @@
         </div>
 
         <div id="fuzzy-fields" class="lt-hidden">
+          <div class="grid lt-grid-spacer" style="margin-bottom: 10px;">
+            <div class="form-group">
+              <label for="fuzzy-model">Modelo fuzzy:</label>
+              <select id="fuzzy-model">
+                <option value="operational" selected>Diagnóstico operacional (6 variáveis)</option>
+                <option value="ispc">ISPC triangular (15 variáveis; escala 0–10)</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="fuzzy-fields-operational">
           <div class="grid lt-grid-spacer">
             <div class="form-group">
               <label for="user-coverage">Cobertura superficial estimada (%):</label>
@@ -115,6 +126,73 @@
           </div>
 
           <p class="lt-muted-2">Você pode preencher apenas o que tiver. Campos vazios são ignorados na inferência.</p>
+          </div>
+
+          <div id="fuzzy-fields-ispc" class="lt-hidden">
+            <div class="grid lt-grid-spacer">
+              <div class="form-group">
+                <label for="ispc-dmg">DMG:</label>
+                <input type="text" id="ispc-dmg" placeholder="Exemplo 1,2">
+              </div>
+              <div class="form-group">
+                <label for="ispc-dmp">DMP:</label>
+                <input type="text" id="ispc-dmp" placeholder="Exemplo 0,8">
+              </div>
+              <div class="form-group">
+                <label for="ispc-rmp">RMP:</label>
+                <input type="text" id="ispc-rmp" placeholder="Exemplo 0,5">
+              </div>
+              <div class="form-group">
+                <label for="ispc-densidade">Densidade:</label>
+                <input type="text" id="ispc-densidade" placeholder="Exemplo 1,35">
+              </div>
+              <div class="form-group">
+                <label for="ispc-estoque-c">Estoque de C:</label>
+                <input type="text" id="ispc-estoque-c" placeholder="Exemplo 2,1">
+              </div>
+              <div class="form-group">
+                <label for="ispc-na">Na:</label>
+                <input type="text" id="ispc-na" placeholder="Exemplo 5">
+              </div>
+              <div class="form-group">
+                <label for="ispc-icv">ICV (%):</label>
+                <input type="text" id="ispc-icv" placeholder="Exemplo 0,3">
+              </div>
+              <div class="form-group">
+                <label for="ispc-altura">Altura de Plantas:</label>
+                <input type="text" id="ispc-altura" placeholder="Exemplo 2,0">
+              </div>
+              <div class="form-group">
+                <label for="ispc-diam-espiga">Diâmetro espiga:</label>
+                <input type="text" id="ispc-diam-espiga" placeholder="Exemplo 48">
+              </div>
+              <div class="form-group">
+                <label for="ispc-comp-espiga">Comprimento espiga:</label>
+                <input type="text" id="ispc-comp-espiga" placeholder="Exemplo 20">
+              </div>
+              <div class="form-group">
+                <label for="ispc-n-plantas">Número de plantas/ha:</label>
+                <input type="text" id="ispc-n-plantas" placeholder="Exemplo 15000">
+              </div>
+              <div class="form-group">
+                <label for="ispc-n-espigas">N total de espigas/ha:</label>
+                <input type="text" id="ispc-n-espigas" placeholder="Exemplo 15000">
+              </div>
+              <div class="form-group">
+                <label for="ispc-n-espigas-com">N de espigas comerciais/ha:</label>
+                <input type="text" id="ispc-n-espigas-com" placeholder="Exemplo 8000">
+              </div>
+              <div class="form-group">
+                <label for="ispc-peso-espigas">Peso de espigas comerciais/ha:</label>
+                <input type="text" id="ispc-peso-espigas" placeholder="Exemplo 1500">
+              </div>
+              <div class="form-group">
+                <label for="ispc-produtividade">Produtividade:</label>
+                <input type="text" id="ispc-produtividade" placeholder="Exemplo 8000">
+              </div>
+            </div>
+            <p class="lt-muted-2">No ISPC, as 15 variáveis são necessárias para calcular o índice. O sistema normaliza automaticamente para 0–10 e aplica o modelo triangular.</p>
+          </div>
         </div>
       </div>
 
@@ -134,8 +212,8 @@
       </div>
 
       <div class="card lt-card-space lt-hidden" id="fuzzy-card">
-        <div class="section-title">Diagnóstico operacional (fuzzy)</div>
-        <div class="result-hint lt-hint">Prioridade operacional estimada a partir dos dados do talhão e regras fuzzy.</div>
+        <div class="section-title" id="fuzzy-card-title">Diagnóstico operacional (fuzzy)</div>
+        <div class="result-hint lt-hint" id="fuzzy-card-hint">Prioridade operacional estimada a partir dos dados do talhão e regras fuzzy.</div>
         <div class="lt-spacer-10">
           <div class="lt-fuzzy-score" id="fuzzy-result">Indeterminado</div>
           <div class="lt-fuzzy-explain" id="fuzzy-explain"></div>
@@ -167,7 +245,7 @@
   </main>
 
   <footer class="container" style="margin-top: 32px;">
-    <p>ICS Analyzer &copy; 2026 | Módulo de Análise de Longo Prazo</p>
+    <p>ICS Analyzer &copy; 2026 | Módulo de Análise Conservacionista</p>
   </footer>
 </body>
 </html>

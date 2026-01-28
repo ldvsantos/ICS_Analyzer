@@ -15,7 +15,7 @@
     const doc = new jsPDF();
 
     doc.setFontSize(16);
-    doc.text('Relatório de Análise de Longo Prazo', 105, 15, null, null, 'center');
+    doc.text('Relatório de Análise Conservacionista', 105, 15, null, null, 'center');
     doc.setFontSize(12);
     doc.setTextColor(100);
     doc.text(`Período analisado: ${data.startYear} - ${data.endYear}`, 105, 25, null, null, 'center');
@@ -109,6 +109,82 @@
           y = 20;
         }
         doc.text(splitRecs, 15, y);
+      }
+    }
+
+    if (data.fuzzyISPC && (Number.isFinite(data.fuzzyISPC.score) || (data.fuzzyISPC.missingRawInputs && data.fuzzyISPC.missingRawInputs.length))) {
+      let y = afterConclusionsY;
+      if (data.fuzzy && (Number.isFinite(data.fuzzy.priorityScore) || (data.fuzzy.recommendations && data.fuzzy.recommendations.length))) {
+        // Se o bloco operacional foi escrito, continuamos a partir do final da página atual.
+        y = 20;
+        doc.addPage();
+      } else if (y > 265) {
+        doc.addPage();
+        y = 20;
+      }
+
+      doc.setFontSize(14);
+      doc.setTextColor(0);
+      doc.text('ISPC triangular (fuzzy)', 15, y);
+      y += 8;
+
+      doc.setFontSize(11);
+      doc.setTextColor(40);
+      if (Number.isFinite(data.fuzzyISPC.score)) {
+        const label = data.fuzzyISPC.classLabel ? String(data.fuzzyISPC.classLabel) : 'Indeterminado';
+        doc.text(`ISPC: ${label} (${data.fuzzyISPC.score.toFixed(2)}/10)`, 15, y);
+        y += 7;
+      } else {
+        doc.text('ISPC: Indeterminado', 15, y);
+        y += 7;
+      }
+
+      if (data.fuzzyISPC.missingRawInputs && data.fuzzyISPC.missingRawInputs.length) {
+        const splitMissing = doc.splitTextToSize(`Faltam entradas para calcular: ${data.fuzzyISPC.missingRawInputs.join(', ')}`, 180);
+        doc.text(splitMissing, 15, y);
+        y += splitMissing.length * 6;
+      }
+
+      if (data.fuzzyISPC.topRules && data.fuzzyISPC.topRules.length) {
+        const rulesTxt = data.fuzzyISPC.topRules
+          .map((r) => `R${r.idx} (força ${Number.isFinite(r.strength) ? r.strength.toFixed(2) : 'NA'})`)
+          .join(' | ');
+        const splitRules = doc.splitTextToSize(`Regras mais ativadas: ${rulesTxt}`, 180);
+        doc.text(splitRules, 15, y);
+        y += splitRules.length * 6;
+      }
+
+      if (data.fuzzyISPC.rawInputs) {
+        const iu = data.fuzzyISPC.rawInputs;
+        const parts = [];
+        const add = (label, val) => {
+          if (Number.isFinite(val)) parts.push(`${label}: ${val}`);
+        };
+        add('DMG', iu.dmg);
+        add('DMP', iu.dmp);
+        add('RMP', iu.rmp);
+        add('Densidade', iu.densidade);
+        add('Estoque de C', iu.estoque_c);
+        add('Na', iu.na);
+        add('ICV(%)', iu.icv);
+        add('Altura', iu.altura);
+        add('Diâmetro espiga', iu.diam_espiga);
+        add('Comprimento espiga', iu.comp_espiga);
+        add('N plantas/ha', iu.n_plantas);
+        add('N espigas/ha', iu.n_espigas);
+        add('N espigas comerciais/ha', iu.n_espigas_com);
+        add('Peso espigas comerciais/ha', iu.peso_espigas);
+        add('Produtividade', iu.produtividade);
+
+        if (parts.length) {
+          const splitInputs = doc.splitTextToSize(`Entradas (brutas): ${parts.join(' | ')}`, 180);
+          if (y + splitInputs.length * 6 > 280) {
+            doc.addPage();
+            y = 20;
+          }
+          doc.text(splitInputs, 15, y);
+          y += splitInputs.length * 6;
+        }
       }
     }
 
