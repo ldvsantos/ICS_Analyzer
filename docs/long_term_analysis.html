@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise de Longo Prazo - ICS Analyzer</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="assets/js/app.js" defer></script>
+    <script src="assets/js/ics_analyzer_calc.js" defer></script>
+    <script src="assets/js/ics_analyzer_charts.js" defer></script>
+    <script src="assets/js/ics_analyzer_pdf_lt.js" defer></script>
+</head>
+<body>
+    <header>
+        <h1>Análise de Longo Prazo da Qualidade do Solo</h1>
+        <p>Baseado em pesquisa de 22 anos (Jussimara et al, 2026)</p>
+    </header>
+
+    <main class="container">
+        <section id="input-section">
+            <h2>Parâmetros de Análise</h2>
+            <div class="form-group">
+                <label for="tillage-system">Sistema de Preparo:</label>
+                <select id="tillage-system">
+                    <option value="CT">Convencional (CT)</option>
+                    <option value="MT">Mínimo (MT)</option>
+                    <option value="NT" selected>Plantio Direto (NT)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="previous-crop">Cultura Anterior:</label>
+                <select id="previous-crop">
+                    <option value="Cowpea">Feijão-caupi</option>
+                    <option value="Pigeon Pea">Guandu</option>
+                    <option value="Sunn Hemp">Crotalária</option>
+                    <option value="Pearl Millet" selected>Milheto</option>
+                    <option value="Control">Controle</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="years">Anos de Manejo:</label>
+                <input type="number" id="years" min="1" max="50" value="22">
+            </div>
+            
+            <button id="calculate-btn" class="btn">Calcular Índice SQ</button>
+        </section>
+        
+        <section id="results-section" style="display:none;">
+            <h2>Resultados</h2>
+            <div class="chart-row">
+                <div class="chart-container">
+                    <canvas id="sq-chart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="tillage-chart"></canvas>
+                </div>
+            </div>
+            <button id="generate-pdf" class="btn">Gerar Relatório PDF</button>
+        </section>
+        
+        <section id="research-section">
+            <h2>Base Científica</h2>
+            <p>Estudo realizado por 22 anos em solo argiloso avaliando:</p>
+            <ul>
+                <li>3 sistemas de preparo (CT, MT, NT)</li>
+                <li>5 culturas anteriores</li>
+                <li>Parâmetros físicos e estruturais do solo</li>
+            </ul>
+            <blockquote>
+                "Sistemas conservacionistas (MT/NT) mantiveram qualidade estrutural superior
+                mesmo após 22 anos de cultivo contínuo."
+            </blockquote>
+        </section>
+    </main>
+
+    <footer>
+        <p>ICS Analyzer &copy; 2026 | Módulo de Análise de Longo Prazo</p>
+    </footer>
+</body>
+</html>

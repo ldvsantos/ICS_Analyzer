@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ICS Analyzer | Manual</title>
+  <title>ICS Analyzer | Manual de Uso</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
-  <link rel="stylesheet" href="assets/css/styles.css?v=2026-01-27-1" />
-  <link rel="stylesheet" href="assets/css/mobile.css?v=2026-01-27-1" media="(max-width: 1024px)" />
+  <link rel="stylesheet" href="assets/css/styles.css?v=2026-01-28-2" />
+  <link rel="stylesheet" href="assets/css/mobile.css?v=2026-01-28-1" media="(max-width: 1024px)" />
 </head>
-<body>
+<body class="manual-page">
   <header>
     <div class="container">
       <div class="brand">
         <div>
           <h1>Manual do ICS Analyzer</h1>
-          <p>Guia rápido de uso do sistema com exportação em PDF</p>
+          <p>Manual de uso (campo → sistema → relatório) — atualizado em 28/01/2026</p>
         </div>
       </div>
       <nav>
@@ -28,112 +28,434 @@
   <main class="container">
     <section class="hero">
       <div>
-        <h2>Manual completo de uso</h2>
-        <p>Este manual ensina como operar o aparato bípode–treliça no campo e como usar o sistema para gerar o relatório em PDF.</p>
-        <div class="button-group">
+        <h2>Como usar (de verdade) — do campo ao PDF</h2>
+        <p>
+          Este manual descreve o fluxo completo: <strong>planejamento</strong>, <strong>coleta em campo (H e V)</strong>,
+          <strong>lançamento no sistema</strong> e <strong>interpretação dos resultados</strong>.
+        </p>
+
+        <div class="manual-callout" role="note">
+          <div class="manual-callout-title">Fórmula usada pelo sistema</div>
+          <div class="manual-callout-body">
+            Em cada ponto <span class="manual-mono">i</span>, o índice pontual é calculado como
+            <span class="manual-mono">ICS_i = H_i × V_i</span>, com classes discretas de <span class="manual-mono">0,0</span> a <span class="manual-mono">1,0</span> (passo <span class="manual-mono">0,2</span>).
+          </div>
+        </div>
+
+        <div class="button-group" style="margin-top: 14px;">
           <a class="btn" href="sistema.html">Abrir o Sistema</a>
+          <a class="btn btn-secondary" href="#sumario">Ir para o Sumário</a>
         </div>
       </div>
+
       <div>
-        <h3 class="section-title" style="border-bottom: 0; margin-top: 0;">Visão rápida</h3>
+        <figure class="manual-figure">
+          <img src="assets/img/aparato_exemplo.png" alt="Exemplo do aparato em uso no campo" loading="lazy">
+          <figcaption>Exemplo de uso do aparato em campo (posicionamento e estabilidade).</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="sumario" class="card manual-section">
+      <h2 class="section-title" style="margin-bottom: 12px;">Sumário</h2>
+      <div class="manual-toc">
+        <a href="#visao-geral">1) Visão geral do fluxo</a>
+        <a href="#conceitos">2) Conceitos (H, V, classes e n)</a>
+        <a href="#campo">3) Procedimento em campo (passo a passo)</a>
+        <a href="#lancamento">4) Como lançar no sistema</a>
+        <a href="#resultados">5) Como interpretar os resultados</a>
+        <a href="#clima">6) Módulo climático (opcional)</a>
+        <a href="#risco">7) Risco / Indicador / USLE (opcionais)</a>
+        <a href="#calibracao">8) Calibração do campo visual (m²)</a>
+        <a href="#pdf">9) Exportação do PDF</a>
+        <a href="#qualidade">10) Controle de qualidade</a>
+        <a href="#problemas">11) Problemas comuns (solução rápida)</a>
+        <a href="#exemplo-completo">12) Exemplo completo (cálculo manual)</a>
+        <a href="#checklist-imprimivel">13) Checklist imprimível (1 página)</a>
+      </div>
+    </section>
+
+    <section id="visao-geral" class="manual-section">
+      <h2 class="section-title">1) Visão geral do fluxo</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Planeje</h3>
+          <p>Defina a <strong>unidade amostral</strong>, o número de segmentos <span class="manual-mono">s</span> e o número de pontos por segmento <span class="manual-mono">n</span> (recomendado <span class="manual-mono">n = 16</span> em 1,60 m).</p>
+        </div>
+        <div class="card">
+          <h3>Leia (H e V)</h3>
+          <p>Em cada ponto <span class="manual-mono">i</span>, faça duas leituras no retículo: <strong>Horizontal (H)</strong> e <strong>Vertical (V)</strong>, registrando classes entre <span class="manual-mono">0,0</span> e <span class="manual-mono">1,0</span>.</p>
+        </div>
+        <div class="card">
+          <h3>Calcule e reporte</h3>
+          <p>O sistema calcula <span class="manual-mono">ICS_i</span>, a média <span class="manual-mono">ICS̄</span> e estatísticas (ex.: <strong>CV</strong>, <strong>Range</strong>), e exporta o relatório em PDF.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="conceitos" class="manual-section">
+      <h2 class="section-title">2) Conceitos essenciais</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>O que é H e V?</h3>
+          <ul class="list">
+            <li><strong>H (Horizontal):</strong> fração de cobertura observada na linha horizontal do retículo.</li>
+            <li><strong>V (Vertical):</strong> fração de cobertura observada na linha vertical do retículo.</li>
+            <li>Faça as leituras de forma independente, evitando paralaxe (olho centralizado).</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>Classes aceitas</h3>
+          <p>Registre classes discretas:</p>
+          <div class="manual-chip-row">
+            <span class="manual-chip">0,0</span>
+            <span class="manual-chip">0,2</span>
+            <span class="manual-chip">0,4</span>
+            <span class="manual-chip">0,6</span>
+            <span class="manual-chip">0,8</span>
+            <span class="manual-chip">1,0</span>
+          </div>
+          <p style="margin-top: 10px;">Regra prática: se estiver entre duas classes, escolha a <strong>menor</strong> (conservadora) e registre a condição nas observações.</p>
+        </div>
+
+        <div class="card">
+          <h3>Como o índice é calculado</h3>
+          <p>
+            Em cada ponto <span class="manual-mono">i</span>: <span class="manual-mono">ICS_i = H_i × V_i</span>.
+            A média do segmento é <span class="manual-mono">ICS̄_seg = (Σ ICS_i) / n</span>.
+          </p>
+          <p style="margin-top: 10px;" class="manual-muted">Isso faz o índice ser “conjuntivo”: se H ou V estiver baixo, o produto também cai.</p>
+        </div>
+      </div>
+
+      <figure class="manual-figure" style="margin-top: 14px;">
+        <img src="assets/img/figura_reticulo_explicacao.png" alt="Ilustração das linhas horizontal e vertical no retículo" loading="lazy">
+        <figcaption>Leitura no retículo: referência para H (horizontal) e V (vertical).</figcaption>
+      </figure>
+    </section>
+
+    <section id="campo" class="manual-section">
+      <h2 class="section-title">3) Procedimento em campo (passo a passo)</h2>
+
+      <div class="card manual-steps">
+        <h3>Checklist rápido antes de iniciar</h3>
         <ul class="list">
-          <li>Monte e nivele o aparato na unidade amostral.</li>
-          <li>Registre as leituras de cobertura no campo.</li>
-          <li>Insira os dados no sistema e gere o PDF.</li>
+          <li>Defina a unidade amostral e registre <strong>data, hora, operador e local</strong>.</li>
+          <li>Confirme o plano: número de segmentos <span class="manual-mono">s</span> e pontos por segmento <span class="manual-mono">n</span> (recomendado <span class="manual-mono">n = 16</span>).</li>
+          <li>Faça <strong>1 segmento piloto</strong> para confirmar estabilidade do campo visual e repetibilidade da leitura.</li>
+        </ul>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h3>3.1 Montagem e estabilização</h3>
+          <ul class="list">
+            <li>Posicione os bípodes e acople a treliça (comprimento operacional <strong>1,60 m</strong>).</li>
+            <li>Fixe as ponteiras no solo; em solo solto use ancoragem (pinos) para evitar deslocamento.</li>
+            <li>Em declive, acione o mecanismo de nivelamento e trave o conjunto.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>3.2 Sequência de leituras</h3>
+          <ul class="list">
+            <li>Defina o ponto inicial e a sequência até o final do segmento.</li>
+            <li>Em cada ponto <span class="manual-mono">i</span>: faça <strong>H</strong> e <strong>V</strong> e registre imediatamente.</li>
+            <li>Repita até completar <span class="manual-mono">n</span> pontos.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>3.3 Quando invalidar um segmento</h3>
+          <ul class="list">
+            <li>Deslocamento do aparato, perda de nivelamento ou visibilidade comprometida.</li>
+            <li>Interferência severa (sombra/contraluz, chuva intensa, obstruções).</li>
+            <li>Nesses casos: <strong>invalide</strong>, corrija, repita e registre a ocorrência.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="lancamento" class="manual-section">
+      <h2 class="section-title">4) Como lançar no sistema</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>4.1 Metadados</h3>
+          <p>Preencha projeto, local, data/hora, operador e unidade amostral. Esses campos vão para o PDF.</p>
+        </div>
+        <div class="card">
+          <h3>4.2 Condições de campo</h3>
+          <p>Registre céu/iluminação, sombra, vento, precipitação (momento e recente), umidade superficial e observações. Isso dá rastreabilidade e explica variações.</p>
+        </div>
+        <div class="card">
+          <h3>4.3 Leituras H e V</h3>
+          <p>Para cada ponto <span class="manual-mono">L1…Ln</span>, selecione a classe de <strong>H</strong> e <strong>V</strong>. O sistema calcula <span class="manual-mono">ICS_i</span> automaticamente.</p>
+        </div>
+      </div>
+
+      <div class="manual-callout" role="note" style="margin-top: 14px;">
+        <div class="manual-callout-title">Dica de consistência</div>
+        <div class="manual-callout-body">Lance as leituras na mesma ordem do campo (L1 → Ln) para facilitar auditoria e repetição.</div>
+      </div>
+    </section>
+
+    <section id="resultados" class="manual-section">
+      <h2 class="section-title">5) Como interpretar os resultados</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>ICS̄ e % Cobertura</h3>
+          <p><span class="manual-mono">ICS̄</span> varia de 0 a 1. O sistema também mostra <strong>% Cobertura</strong> como <span class="manual-mono">100 × ICS̄</span>.</p>
+        </div>
+        <div class="card">
+          <h3>Exposição</h3>
+          <p>Uma leitura operacional usada nos módulos é <span class="manual-mono">Exposição = 1 − ICS̄</span> (quanto maior, mais solo potencialmente exposto).</p>
+        </div>
+        <div class="card">
+          <h3>CV e Range</h3>
+          <p><strong>CV</strong> e <strong>Range</strong> indicam heterogeneidade entre pontos. Cobertura média boa com CV/Range altos pode indicar “hotspots” de solo exposto.</p>
+        </div>
+      </div>
+
+      <figure class="manual-figure" style="margin-top: 14px;">
+        <img src="assets/img/abstract_grafico.png" alt="Exemplo de visualização do perfil de cobertura" loading="lazy">
+        <figcaption>Exemplo ilustrativo de visualização do perfil (gráfico de área) ao longo do segmento.</figcaption>
+      </figure>
+    </section>
+
+    <section id="clima" class="manual-section">
+      <h2 class="section-title">6) Módulo climático (opcional)</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Quando usar</h3>
+          <p>Use quando quiser contextualizar o risco por condição antecedente (chuva recente) e comparar campanhas com regimes de chuva diferentes.</p>
+        </div>
+        <div class="card">
+          <h3>Como preencher</h3>
+          <p>Informe latitude/longitude e o período. Clique em <strong>Buscar dados climáticos</strong> (requer internet).</p>
+        </div>
+        <div class="card">
+          <h3>O que o sistema resume</h3>
+          <p>Chuva total, chuva dos últimos 7/30 dias e máximo diário no período (entre outros). Se falhar, o sistema continua funcionando sem clima.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="risco" class="manual-section">
+      <h2 class="section-title">7) Risco / Indicador / USLE (opcionais)</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Risco de erosão potencial (0–100)</h3>
+          <p>Índice de triagem e priorização. Combina exposição (<span class="manual-mono">1 − ICS̄</span>), chuva recente (se disponível), declividade e textura (proxy).</p>
+        </div>
+        <div class="card">
+          <h3>Indicador composto (0–100)</h3>
+          <p>Voltado a monitoramento: <strong>maior é melhor</strong>. Privilegia cobertura média e penaliza variabilidade (CV/Range).</p>
+        </div>
+        <div class="card">
+          <h3>USLE (estimativa)</h3>
+          <p>Estimativa aproximada baseada em <span class="manual-mono">A = R·K·LS·C·P</span> para comparação/triagem. Não substitui parametrização completa de RUSLE.</p>
+        </div>
+      </div>
+
+      <div class="manual-callout" role="note" style="margin-top: 14px;">
+        <div class="manual-callout-title">Declividade e textura</div>
+        <div class="manual-callout-body">Essas entradas são usadas nos módulos de risco/USLE e também aparecem no PDF (mesmo que não sejam exibidas como cards na tela).</div>
+      </div>
+    </section>
+
+    <section id="calibracao" class="manual-section">
+      <h2 class="section-title">8) Calibração do campo visual (m²)</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Para que serve</h3>
+          <p>Permite converter o índice em área: <span class="manual-mono">At_i = ICS_i × A_campo</span> e somar áreas cobertas/expostas em m².</p>
+        </div>
+        <div class="card">
+          <h3>Como usar</h3>
+          <p>Preencha a seção de calibração (distância e geometria do campo visual). O sistema calcula <span class="manual-mono">A_campo</span>.</p>
+        </div>
+        <div class="card">
+          <h3>Boa prática</h3>
+          <p>Use a mesma configuração (distância/geom) ao longo de campanhas comparativas para manter rastreabilidade.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="pdf" class="manual-section">
+      <h2 class="section-title">9) Exportação do PDF</h2>
+      <div class="card">
+        <ul class="list">
+          <li>O PDF inclui metadados, condições ambientais, estatísticas e tabela completa de leituras.</li>
+          <li>O arquivo é salvo com nome do tipo <span class="manual-mono">ICS_&lt;Projeto&gt;_AAAA-MM-DD.pdf</span>.</li>
+          <li>A exportação é liberada após executar <strong>Calcular Resultados</strong>.</li>
         </ul>
       </div>
     </section>
 
-    <section style="margin-top: 28px;">
-      <h2 class="section-title">1) Operação do aparato no campo</h2>
+    <section id="qualidade" class="manual-section">
+      <h2 class="section-title">10) Controle de qualidade (recomendado)</h2>
       <div class="grid">
         <div class="card">
-          <h3>Montagem e nivelamento</h3>
-          <p>Posicione os dois bípodes, conecte a treliça e ajuste o nivelamento até alinhar o conjunto ao plano do solo.</p>
+          <h3>Repetibilidade intraoperador</h3>
+          <p>Repita ~10% dos segmentos (reposicionando o aparato) e reporte diferença absoluta de <span class="manual-mono">ICS̄_seg</span> (média e máxima).</p>
         </div>
         <div class="card">
-          <h3>Posicionamento do retículo</h3>
-          <p>Use o retículo na posição de leitura e mantenha o observador perpendicular ao equipamento para reduzir viés.</p>
+          <h3>Interoperador</h3>
+          <p>Se aplicável, selecione segmentos representativos e compare leituras entre operadores (sem compartilhar registros).</p>
         </div>
         <div class="card">
-          <h3>Sequência de leituras</h3>
-          <p>Realize as leituras de L1 a Ln na sequência da treliça, registrando classe ou percentual observado.</p>
+          <h3>Critérios de aceitação</h3>
+          <p>Segmentos com falhas de estabilidade/nivelamento/visibilidade comprometida não devem entrar no cálculo final.</p>
         </div>
       </div>
     </section>
 
-    <section style="margin-top: 28px;">
-      <h2 class="section-title">2) Registro das leituras</h2>
+    <section id="problemas" class="manual-section">
+      <h2 class="section-title">11) Problemas comuns (solução rápida)</h2>
       <div class="grid">
         <div class="card">
-          <h3>Valores aceitos</h3>
-          <p>Registre valores entre 0.00 e 1.00, seguindo as classes visuais do protocolo.</p>
+          <h3>“Buscar dados climáticos” falhou</h3>
+          <p>Verifique internet e coordenadas. Se continuar, prossiga sem clima: o cálculo do ICS e o PDF continuam disponíveis.</p>
         </div>
         <div class="card">
-          <h3>Tamanho da amostra</h3>
-          <p>Selecione 8, 16, 24 ou 32 leituras. O padrão recomendado é 16 leituras.</p>
+          <h3>PDF não gera</h3>
+          <p>Garanta que você clicou em <strong>Calcular Resultados</strong> antes. Se houver bloqueio de pop-up/download, permita para a página.</p>
         </div>
         <div class="card">
-          <h3>Consistência</h3>
-          <p>Mantenha o mesmo operador e o mesmo ponto de observação para reduzir variações.</p>
+          <h3>Resultados “estranhos”</h3>
+          <p>Revise se H e V foram lançados corretamente em cada ponto e se o <span class="manual-mono">n</span> selecionado corresponde ao campo. Em dúvida: refaça um segmento piloto.</p>
         </div>
       </div>
     </section>
 
-    <section style="margin-top: 28px;">
-      <h2 class="section-title">3) Uso do sistema</h2>
-      <div class="grid">
-        <div class="card">
-          <h3>Dados do projeto</h3>
-          <p>Preencha nome do projeto, local, data, hora, operador e unidade amostral.</p>
-        </div>
-        <div class="card">
-          <h3>Condições ambientais</h3>
-          <p>Registre as condições do céu/iluminação, presença de sombra, vento, precipitação no momento, precipitação recente, umidade superficial e observações relevantes.</p>
-        </div>
-        <div class="card">
-          <h3>Calcular e validar</h3>
-          <p>Clique em “Calcular” e verifique média, CV% e classificação antes do PDF.</p>
-        </div>
-      </div>
-    </section>
-
-    <section style="margin-top: 28px;">
-      <h2 class="section-title">3.1) Como preencher as condições ambientais</h2>
-      <div class="grid">
-        <div class="card">
-          <h3>Céu/iluminação e sombra</h3>
-          <p>Marque o estado do céu (limpo/parcial/nublado/encoberto) e se há sombra na área/retículo. Isso ajuda a contextualizar a visibilidade e a repetibilidade das leituras.</p>
-        </div>
-        <div class="card">
-          <h3>Vento e precipitação</h3>
-          <p>Registre vento e se está chovendo/chuviscando no momento. Se houve precipitação recente, informe o intervalo (ex.: &lt;24h, 1–3 dias).</p>
-        </div>
-        <div class="card">
-          <h3>Umidade superficial</h3>
-          <p>Classifique a superfície (solo/resíduo) como seco, úmido, molhado ou encharcado. Use o campo de observações para registrar particularidades (ex.: orvalho, solo muito pegajoso, resíduos saturados).</p>
-        </div>
-      </div>
-    </section>
-
-    <section style="margin-top: 28px;">
-      <h2 class="section-title">4) Exportação do PDF</h2>
+    <section id="exemplo-completo" class="manual-section">
+      <h2 class="section-title">12) Exemplo completo (cálculo manual)</h2>
       <div class="card">
-        <p>O PDF inclui dados do projeto, condições ambientais, estatísticas e tabela completa de leituras. O arquivo é salvo automaticamente no computador com o nome:</p>
-        <p style="margin-top: 8px; font-weight: 600;">ICS_&lt;Projeto&gt;_AAAA-MM-DD.pdf</p>
-        <p style="margin-top: 8px;">A exportação só é liberada após o cálculo.</p>
-      </div>
-    </section>
+        <p>
+          Abaixo vai um exemplo <strong>didático</strong> com <span class="manual-mono">n = 8</span> apenas para mostrar o cálculo “na mão”.
+          No protocolo de campo, recomenda-se <span class="manual-mono">n = 16</span> pontos por segmento em <span class="manual-mono">1,60 m</span>.
+        </p>
 
-    <section style="margin-top: 28px;">
-      <h2 class="section-title">Referências (embasamento de campo)</h2>
-      <div class="card">
-        <p>Os campos ambientais seguem a prática comum de registrar metadados de observação em métodos de monitoramento por interceptação/pontos e protocolos de campo (ex.: condição do céu, vento, precipitação e observações do sítio), para garantir rastreabilidade e comparabilidade das campanhas.</p>
-        <p style="margin-top: 10px; font-weight: 600;">Links úteis:</p>
-        <ul class="list" style="margin-top: 8px;">
-          <li>Landscape Toolbox – Monitoring Manual (página com manuais e fichas de campo): https://www.landscapetoolbox.org/methods-manuals/monitoring-manual-2nd-edition/</li>
-          <li>Landscape Toolbox – Line-Point Intercept (visão geral do método e referências): https://www.landscapetoolbox.org/methods/line-point-intercept/</li>
+        <div class="manual-callout" role="note" style="margin-top: 12px;">
+          <div class="manual-callout-title">Regra do índice pontual (igual ao sistema)</div>
+          <div class="manual-callout-body">
+            Para cada ponto <span class="manual-mono">i</span>:
+            <span class="manual-mono">ICS_i = H_i × V_i</span>.
+            A média do segmento é <span class="manual-mono">ICS̄ = (Σ ICS_i)/n</span>.
+          </div>
+        </div>
+
+        <div class="manual-table-wrap" style="margin-top: 12px;">
+          <table class="manual-table" aria-label="Exemplo de leituras H e V e cálculo de ICS">
+            <thead>
+              <tr>
+                <th>Ponto</th>
+                <th>H</th>
+                <th>V</th>
+                <th>ICS<sub>i</sub> = H×V</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>L1</td><td>0,80</td><td>0,60</td><td>0,48</td></tr>
+              <tr><td>L2</td><td>0,60</td><td>0,60</td><td>0,36</td></tr>
+              <tr><td>L3</td><td>0,60</td><td>0,40</td><td>0,24</td></tr>
+              <tr><td>L4</td><td>0,40</td><td>0,40</td><td>0,16</td></tr>
+              <tr><td>L5</td><td>0,80</td><td>0,80</td><td>0,64</td></tr>
+              <tr><td>L6</td><td>1,00</td><td>0,80</td><td>0,80</td></tr>
+              <tr><td>L7</td><td>0,60</td><td>0,60</td><td>0,36</td></tr>
+              <tr><td>L8</td><td>0,40</td><td>0,20</td><td>0,08</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 style="margin-top: 14px;">Resultados do exemplo</h3>
+        <ul class="list">
+          <li><strong>Soma</strong>: <span class="manual-mono">Σ ICS_i = 3,120</span></li>
+          <li><strong>Média</strong>: <span class="manual-mono">ICS̄ = 3,120 / 8 = 0,390</span></li>
+          <li><strong>% Cobertura</strong>: <span class="manual-mono">100 × ICS̄ = 39,0%</span></li>
+          <li><strong>Mínimo / Máximo</strong>: <span class="manual-mono">min = 0,080</span> e <span class="manual-mono">max = 0,800</span></li>
+          <li><strong>Range (amplitude)</strong>: <span class="manual-mono">max − min = 0,800 − 0,080 = 0,720</span></li>
         </ul>
+
+        <div class="manual-callout" role="note" style="margin-top: 12px;">
+          <div class="manual-callout-title">Como o sistema calcula o CV (importante!)</div>
+          <div class="manual-callout-body">
+            O sistema usa variância <strong>populacional</strong> (divide por <span class="manual-mono">n</span>, e não por <span class="manual-mono">n−1</span>):
+            <span class="manual-mono">Var = Σ(ICS_i − ICS̄)² / n</span>.
+            Neste exemplo: <span class="manual-mono">Σ(⋯)² = 0,412</span> → <span class="manual-mono">Var = 0,412/8 = 0,0515</span> →
+            <span class="manual-mono">DP = √Var = 0,227</span> → <span class="manual-mono">CV = (DP/ICS̄)×100 = 58,2%</span>.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="checklist-imprimivel" class="manual-section">
+      <h2 class="section-title">13) Checklist imprimível (1 página)</h2>
+
+      <div class="card print-hide">
+        <p>Use como checklist de campo e/ou anexe ao caderno de coleta. Clique para imprimir apenas a folha abaixo.</p>
+        <div class="button-group" style="margin-top: 10px;">
+          <button class="btn btn-secondary" id="btn-print-checklist" type="button">Imprimir checklist</button>
+        </div>
+      </div>
+
+      <div class="manual-print-sheet" id="checklist-sheet" role="region" aria-label="Checklist imprimível">
+        <div class="manual-print-header">
+          <div>
+            <div class="manual-print-title">ICS Analyzer — Checklist de Campo</div>
+            <div class="manual-print-sub">(formato 1 página — para impressão)</div>
+          </div>
+          <div class="manual-print-meta">
+            <div><strong>Data:</strong> ____/____/______</div>
+            <div><strong>Operador:</strong> __________________________</div>
+            <div><strong>Local:</strong> ______________________________</div>
+          </div>
+        </div>
+
+        <div class="manual-print-grid">
+          <div class="manual-print-block">
+            <div class="manual-print-block-title">Planejamento</div>
+            <label class="manual-check"><input type="checkbox"> Definir unidade amostral e segmentos (<span class="manual-mono">s</span>).</label>
+            <label class="manual-check"><input type="checkbox"> Definir <span class="manual-mono">n</span> (recomendado <span class="manual-mono">16</span> em 1,60 m).</label>
+            <label class="manual-check"><input type="checkbox"> Preparar ficha/caderno (metadados + observações).</label>
+          </div>
+
+          <div class="manual-print-block">
+            <div class="manual-print-block-title">Montagem e estabilidade</div>
+            <label class="manual-check"><input type="checkbox"> Fixar bípodes/ponteiras; evitar deslocamento.</label>
+            <label class="manual-check"><input type="checkbox"> Nivelar e travar (especialmente em declive).</label>
+            <label class="manual-check"><input type="checkbox"> Fazer 1 segmento piloto (checagem de repetibilidade).</label>
+          </div>
+
+          <div class="manual-print-block">
+            <div class="manual-print-block-title">Leituras (em cada ponto)</div>
+            <label class="manual-check"><input type="checkbox"> Ler <strong>H</strong> (horizontal) e registrar (0,0…1,0).</label>
+            <label class="manual-check"><input type="checkbox"> Ler <strong>V</strong> (vertical) e registrar (0,0…1,0).</label>
+            <label class="manual-check"><input type="checkbox"> Manter olho centralizado (reduzir paralaxe).</label>
+          </div>
+
+          <div class="manual-print-block">
+            <div class="manual-print-block-title">Regras de invalidação</div>
+            <label class="manual-check"><input type="checkbox"> Invalide se houve deslocamento, perda de nivelamento ou baixa visibilidade.</label>
+            <label class="manual-check"><input type="checkbox"> Registre ocorrência e repita o segmento após correção.</label>
+          </div>
+
+          <div class="manual-print-block manual-print-span">
+            <div class="manual-print-block-title">Cálculo (referência rápida)</div>
+            <div class="manual-print-inline">
+              <span class="manual-mono">ICS_i = H_i × V_i</span> &nbsp;|&nbsp;
+              <span class="manual-mono">ICS̄ = (Σ ICS_i)/n</span> &nbsp;|&nbsp;
+              <span class="manual-mono">% = 100×ICS̄</span>
+            </div>
+            <div class="manual-print-inline" style="margin-top:6px;">
+              Classes aceitas: <span class="manual-mono">0,0</span> <span class="manual-mono">0,2</span> <span class="manual-mono">0,4</span> <span class="manual-mono">0,6</span> <span class="manual-mono">0,8</span> <span class="manual-mono">1,0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="manual-print-notes">
+          <div><strong>Observações:</strong> _______________________________________________________________________________________</div>
+          <div style="margin-top:6px;">________________________________________________________________________________________________________</div>
+        </div>
       </div>
     </section>
   </main>
@@ -145,5 +467,20 @@
   </footer>
 
   <script src="assets/js/app.js"></script>
+  <script>
+    (() => {
+      const btn = document.getElementById('btn-print-checklist');
+      if (!btn) return;
+
+      const clear = () => document.body.classList.remove('print-checklist');
+
+      btn.addEventListener('click', () => {
+        document.body.classList.add('print-checklist');
+        window.print();
+      });
+
+      window.addEventListener('afterprint', clear);
+    })();
+  </script>
 </body>
 </html>

@@ -58,6 +58,255 @@ img {
   height: auto;
 }
 
+/* ==============================
+   Manual page (scoped styles)
+   ============================== */
+
+.manual-page .manual-section {
+  margin-top: 28px;
+}
+
+.manual-page .manual-muted {
+  color: var(--text-secondary);
+}
+
+.manual-page .manual-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  background: #f1f5f9;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  font-size: 0.9em;
+}
+
+.manual-page .manual-callout {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  border-radius: var(--radius-lg);
+  padding: 14px 14px;
+}
+
+.manual-page .manual-callout-title {
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 6px;
+}
+
+.manual-page .manual-callout-body {
+  color: #1e293b;
+}
+
+.manual-page .manual-toc {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.manual-page .manual-toc a {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: #ffffff;
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.manual-page .manual-toc a:hover {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+.manual-page .manual-figure {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 12px;
+}
+
+.manual-page .manual-figure img {
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.manual-page .manual-figure figcaption {
+  margin-top: 10px;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.manual-page .manual-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.manual-page .manual-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: #ffffff;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.manual-page .manual-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+}
+
+.manual-page .manual-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.manual-page .manual-table th,
+.manual-page .manual-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color);
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+.manual-page .manual-table th {
+  background: #f8fafc;
+  font-weight: 800;
+}
+
+.manual-page .manual-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.manual-page .manual-print-sheet {
+  margin-top: 12px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.manual-page .manual-print-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: start;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+.manual-page .manual-print-title {
+  font-weight: 900;
+  font-size: 1.05rem;
+}
+
+.manual-page .manual-print-sub {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.manual-page .manual-print-meta {
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+.manual-page .manual-print-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.manual-page .manual-print-span {
+  grid-column: 1 / -1;
+}
+
+.manual-page .manual-print-block {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+}
+
+.manual-page .manual-print-block-title {
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+
+.manual-page .manual-print-inline {
+  font-size: 0.95rem;
+}
+
+.manual-page .manual-check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 6px 0;
+}
+
+.manual-page .manual-check input[type="checkbox"] {
+  transform: translateY(2px);
+}
+
+.manual-page .manual-print-notes {
+  margin-top: 12px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 10px;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 900px) {
+  .manual-page .manual-toc {
+    grid-template-columns: 1fr;
+  }
+
+  .manual-page .manual-print-header {
+    grid-template-columns: 1fr;
+  }
+
+  .manual-page .manual-print-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  body.manual-page.print-checklist header,
+  body.manual-page.print-checklist footer,
+  body.manual-page.print-checklist .hero,
+  body.manual-page.print-checklist nav,
+  body.manual-page.print-checklist .print-hide {
+    display: none !important;
+  }
+
+  body.manual-page.print-checklist main > * {
+    display: none !important;
+  }
+
+  body.manual-page.print-checklist #checklist-imprimivel {
+    display: block !important;
+  }
+
+  body.manual-page.print-checklist #checklist-sheet {
+    display: block !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  body.manual-page.print-checklist .manual-mono {
+    border-color: #cbd5e1 !important;
+    background: #f8fafc !important;
+  }
+}
+
 a {
   text-decoration: none;
   color: inherit;
