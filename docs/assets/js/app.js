@@ -91,3 +91,140 @@ function calcularIQS(dados) {
     (parametros.ctc * pesos.ctc)
   ).toFixed(2);
 }
+
+// ================ ANÁLISE DE LONGO PRAZO (SQ) ================ //
+
+(function () {
+  let lastReportData = null;
+
+  function formatNumberPtBR(value) {
+    if (!Number.isFinite(value)) return '';
+    try {
+      return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+    } catch (error) {
+      return value.toFixed(2).replace('.', ',');
+    }
+  }
+
+  function getCalculator() {
+    if (typeof window === 'undefined') return null;
+    if (window.ICS_Calculator) return window.ICS_Calculator;
+    return null;
+  }
+
+  function safeText(el, text) {
+    if (!el) return;
+    el.textContent = String(text);
+  }
+
+  function buildChartData(tillage, crop, years) {
+    if (typeof window === 'undefined' || !window.ICSResearchCoefficients) {
+      return null;
+    }
+
+    const yearsArr = [];
+    const sqValues = [];
+    for (let i = 1; i <= years; i += 1) {
+      yearsArr.push(i);
+      const sq = window.ICSResearchCoefficients.getSQ(tillage, crop, i);
+      sqValues.push(sq);
+    }
+
+    const tillageSystems = {
+      CT: window.ICSResearchCoefficients.getSQ('CT', crop, years),
+      MT: window.ICSResearchCoefficients.getSQ('MT', crop, years),
+      NT: window.ICSResearchCoefficients.getSQ('NT', crop, years)
+    };
+
+    return {
+      years: yearsArr,
+      sqValues,
+      tillageSystems
+    };
+  }
+
+  function initLongTermUI() {
+    const calculateBtn = document.getElementById('calculate-btn');
+    if (!calculateBtn) return;
+
+    const sqResultEl = document.getElementById('sq-result');
+    const recList = document.getElementById('recommendations');
+    const resultsSection = document.getElementById('results-section');
+    const pdfBtn = document.getElementById('generate-pdf');
+
+    calculateBtn.addEventListener('click', () => {
+      try {
+        const tillage = document.getElementById('tillage-system').value;
+        const crop = document.getElementById('previous-crop').value;
+        const years = Math.max(parseInt(document.getElementById('years').value, 10) || 0, 1);
+
+        const Calculator = getCalculator();
+        if (!Calculator) {
+          throw new Error('Calculadora SQ indisponível');
+        }
+
+        const calculator = new Calculator();
+        const sq = calculator.calculateSQ(tillage, crop, years);
+        const recommendations = calculator.generateRecommendations();
+
+        safeText(sqResultEl, formatNumberPtBR(sq));
+
+        if (recList) {
+          recList.innerHTML = '';
+          recommendations.forEach((rec) => {
+            const li = document.createElement('li');
+            li.textContent = rec;
+            recList.appendChild(li);
+          });
+        }
+
+        const chartData = buildChartData(tillage, crop, years);
+        if (chartData && typeof window.renderHistoricalCharts === 'function') {
+          window.renderHistoricalCharts(chartData);
+        }
+
+        if (resultsSection) {
+          resultsSection.style.display = 'block';
+        }
+
+        lastReportData = {
+          startYear: 1,
+          endYear: years,
+          results: (chartData ? chartData.years : [years]).map((year, idx) => ({
+            year,
+            tillageSystem: tillage,
+            crop,
+            sq: chartData ? chartData.sqValues[idx] : sq
+          })),
+          conclusions: recommendations.join('\n')
+        };
+      } catch (error) {
+        console.error(error);
+        alert(`Falha ao calcular SQ. ${error && error.message ? error.message : ''}`);
+      }
+    });
+
+    if (pdfBtn) {
+      pdfBtn.addEventListener('click', () => {
+        if (!lastReportData) {
+          alert('Calcule o índice SQ antes de gerar o PDF.');
+          return;
+        }
+        if (typeof window.generateLongTermPDF !== 'function') {
+          alert('Gerador de PDF indisponível.');
+          return;
+        }
+        try {
+          window.generateLongTermPDF(lastReportData);
+        } catch (error) {
+          console.error(error);
+          alert(`Falha ao gerar PDF. ${error && error.message ? error.message : ''}`);
+        }
+      });
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initLongTermUI();
+  });
+})();

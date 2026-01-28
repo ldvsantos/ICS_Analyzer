@@ -15,7 +15,7 @@
   }
 
   function buildChartData(tillage, crop, years) {
-    if (!window.ICSResearchCoefficients) {
+    if (typeof window === 'undefined' || !window.ICSResearchCoefficients) {
       return null;
     }
 
@@ -55,18 +55,19 @@
     let lastReportData = null;
 
     calculateBtn.addEventListener('click', () => {
-      const tillage = document.getElementById('tillage-system').value;
-      const crop = document.getElementById('previous-crop').value;
-      const years = Math.max(parseInt(document.getElementById('years').value, 10) || 0, 1);
+      try {
+        const tillage = document.getElementById('tillage-system').value;
+        const crop = document.getElementById('previous-crop').value;
+        const years = Math.max(parseInt(document.getElementById('years').value, 10) || 0, 1);
 
-      const Calculator = getCalculator();
-      if (!Calculator) {
-        return;
-      }
+        const Calculator = getCalculator();
+        if (!Calculator) {
+          throw new Error('Calculadora indisponível');
+        }
 
-      const calculator = new Calculator();
-      const sq = calculator.calculateSQ(tillage, crop, years);
-      const recommendations = calculator.generateRecommendations();
+        const calculator = new Calculator();
+        const sq = calculator.calculateSQ(tillage, crop, years);
+        const recommendations = calculator.generateRecommendations();
 
       if (sqResult) {
         sqResult.textContent = sq.toFixed(2);
@@ -81,26 +82,30 @@
         });
       }
 
-      const chartData = buildChartData(tillage, crop, years);
-      if (chartData && typeof window.renderHistoricalCharts === 'function') {
-        window.renderHistoricalCharts(chartData);
-      }
+        const chartData = buildChartData(tillage, crop, years);
+        if (chartData && typeof window.renderHistoricalCharts === 'function') {
+          window.renderHistoricalCharts(chartData);
+        }
 
-      if (resultsSection) {
-        resultsSection.style.display = 'block';
-      }
+        if (resultsSection) {
+          resultsSection.style.display = 'block';
+        }
 
-      lastReportData = {
-        startYear: 1,
-        endYear: years,
-        results: chartData.years.map((year, idx) => ({
-          year,
-          tillageSystem: tillage,
-          crop,
-          sq: chartData.sqValues[idx]
-        })),
-        conclusions: recommendations.join('\n')
-      };
+        lastReportData = {
+          startYear: 1,
+          endYear: years,
+          results: (chartData ? chartData.years : [years]).map((year, idx) => ({
+            year,
+            tillageSystem: tillage,
+            crop,
+            sq: chartData ? chartData.sqValues[idx] : sq
+          })),
+          conclusions: recommendations.join('\n')
+        };
+      } catch (error) {
+        console.error(error);
+        alert(`Falha ao calcular SQ. ${error && error.message ? error.message : ''}`);
+      }
     });
 
     if (pdfBtn) {
@@ -115,60 +120,4 @@
   document.addEventListener('DOMContentLoaded', () => {
     initLongTermUI();
   });
-})();// Arquivo principal de integração
-const ICS_Calculator = require('./ics_analyzer_calc');
-
-// Inicialização do sistema
-function initICSApp() {
-  const calculator = new ICS_Calculator();
-  
-  // Exemplo de uso
-  const tillageSystem = 'NT';
-  const previousCrop = 'Pearl Millet';
-  const years = 22;
-  
-  // Cálculos
-  const sq = calculator.calculateSQ(tillageSystem, previousCrop, years);
-  const recommendations = calculator.generateRecommendations();
-  
-  // Exibição de resultados
-  console.log(`Índice SQ: ${sq.toFixed(2)}`);
-  console.log('Recomendações:');
-  recommendations.forEach(rec => console.log(`- ${rec}`));
-  
-  return {
-    sq,
-    recommendations
-  };
-}
-
-// Inicia o aplicativo quando o DOM estiver pronto
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('ICS Analyzer inicializado');
-  
-  // Configurar botão de cálculo
-  const calculateBtn = document.getElementById('calculate-btn');
-  if (calculateBtn) {
-    calculateBtn.addEventListener('click', () => {
-      const tillage = document.getElementById('tillage-system').value;
-      const crop = document.getElementById('previous-crop').value;
-      const years = parseInt(document.getElementById('years').value) || 0;
-      
-      const calculator = new ICS_Calculator();
-      const sq = calculator.calculateSQ(tillage, crop, years);
-      
-      document.getElementById('sq-result').textContent = sq.toFixed(2);
-      
-      const recList = document.getElementById('recommendations');
-      recList.innerHTML = '';
-      calculator.generateRecommendations().forEach(rec => {
-        const li = document.createElement('li');
-        li.textContent = rec;
-        recList.appendChild(li);
-      });
-    });
-  }
-});
-
-// Inicialização para testes
-module.exports = { initICSApp };
+})();
