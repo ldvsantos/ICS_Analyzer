@@ -169,7 +169,7 @@ function calcularIQS(dados) {
 
     if (enableFuzzyEl && fuzzyFieldsEl) {
       const sync = () => {
-        fuzzyFieldsEl.style.display = enableFuzzyEl.checked ? 'block' : 'none';
+        fuzzyFieldsEl.classList.toggle('lt-hidden', !enableFuzzyEl.checked);
       };
       enableFuzzyEl.addEventListener('change', sync);
       sync();
@@ -224,7 +224,7 @@ function calcularIQS(dados) {
             });
 
             if (fuzzyCardEl) {
-              fuzzyCardEl.style.display = 'block';
+              fuzzyCardEl.classList.remove('lt-hidden');
             }
 
             if (fuzzyResultEl) {
@@ -252,10 +252,10 @@ function calcularIQS(dados) {
               });
             }
           } else if (fuzzyCardEl) {
-            fuzzyCardEl.style.display = 'none';
+            fuzzyCardEl.classList.add('lt-hidden');
           }
         } else if (fuzzyCardEl) {
-          fuzzyCardEl.style.display = 'none';
+          fuzzyCardEl.classList.add('lt-hidden');
         }
 
         const chartData = buildChartData(tillage, crop, years);

@@ -1173,6 +1173,70 @@ button, .btn {
   box-shadow: var(--shadow-sm);
 }
 
+/* Long term analysis fuzzy UI helpers */
+.lt-card {
+  margin-top: 14px;
+}
+
+.lt-card-space {
+  margin-bottom: 16px;
+}
+
+.lt-muted {
+  color: #555;
+  margin-top: 8px;
+}
+
+.lt-muted-2 {
+  color: #666;
+  margin-top: 10px;
+}
+
+.lt-form-spacer {
+  margin-top: 10px;
+}
+
+.lt-grid-spacer {
+  margin-top: 12px;
+}
+
+.lt-toggle-label {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.lt-hidden {
+  display: none;
+}
+
+.lt-hint {
+  color: #555;
+}
+
+.lt-list {
+  padding-left: 18px;
+}
+
+.lt-fuzzy-score {
+  font-weight: 700;
+  color: #1b5e20;
+  font-size: 18px;
+}
+
+.lt-fuzzy-explain {
+  color: #666;
+  margin-top: 6px;
+}
+
+.lt-section-title-sm {
+  margin-bottom: 8px;
+}
+
+.lt-spacer-10 {
+  margin-top: 10px;
+}
+
 @media (max-width: 1024px) {
   .chart-row {
     grid-template-columns: 1fr;

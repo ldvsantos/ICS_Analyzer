@@ -70,19 +70,19 @@
         <input type="number" id="years" min="1" max="50" value="22">
       </div>
 
-      <div class="card" style="margin-top: 14px;">
+      <div class="card lt-card">
         <div class="section-title">Dados do usuário (opcional)</div>
-        <p style="color: #555; margin-top: 8px;">Quando informado, o sistema estima uma prioridade operacional por inferência fuzzy, explicando quais variáveis ativaram a recomendação.</p>
+        <p class="lt-muted">Quando informado, o sistema estima uma prioridade operacional por inferência fuzzy, explicando quais variáveis ativaram a recomendação.</p>
 
-        <div class="form-group" style="margin-top: 10px;">
-          <label style="display:flex; gap:10px; align-items:center;">
+        <div class="form-group lt-form-spacer">
+          <label class="lt-toggle-label">
             <input type="checkbox" id="enable-fuzzy">
             Usar diagnóstico fuzzy com dados do talhão
           </label>
         </div>
 
-        <div id="fuzzy-fields" style="display:none;">
-          <div class="grid" style="margin-top: 12px;">
+        <div id="fuzzy-fields" class="lt-hidden">
+          <div class="grid lt-grid-spacer">
             <div class="form-group">
               <label for="user-coverage">Cobertura superficial estimada (%):</label>
               <input type="text" id="user-coverage" placeholder="Exemplo 65">
@@ -114,7 +114,7 @@
             </div>
           </div>
 
-          <p style="color:#666; margin-top: 10px;">Você pode preencher apenas o que tiver. Campos vazios são ignorados na inferência.</p>
+          <p class="lt-muted-2">Você pode preencher apenas o que tiver. Campos vazios são ignorados na inferência.</p>
         </div>
       </div>
 
@@ -133,16 +133,16 @@
         <ul id="recommendations" style="padding-left: 18px;"></ul>
       </div>
 
-      <div class="card" style="margin-bottom: 16px; display:none;" id="fuzzy-card">
+      <div class="card lt-card-space lt-hidden" id="fuzzy-card">
         <div class="section-title">Diagnóstico operacional (fuzzy)</div>
-        <div class="result-hint" style="color: #555;">Prioridade operacional estimada a partir dos dados do talhão e regras fuzzy.</div>
-        <div style="margin-top: 10px;">
-          <div style="font-weight: 700; color: #1b5e20; font-size: 18px;" id="fuzzy-result">Indeterminado</div>
-          <div style="color:#666; margin-top: 6px;" id="fuzzy-explain"></div>
+        <div class="result-hint lt-hint">Prioridade operacional estimada a partir dos dados do talhão e regras fuzzy.</div>
+        <div class="lt-spacer-10">
+          <div class="lt-fuzzy-score" id="fuzzy-result">Indeterminado</div>
+          <div class="lt-fuzzy-explain" id="fuzzy-explain"></div>
         </div>
-        <div style="margin-top: 10px;">
-          <div class="section-title" style="margin-bottom: 8px;">Recomendações por gatilho</div>
-          <ul id="fuzzy-recommendations" style="padding-left: 18px;"></ul>
+        <div class="lt-spacer-10">
+          <div class="section-title lt-section-title-sm">Recomendações por gatilho</div>
+          <ul id="fuzzy-recommendations" class="lt-list"></ul>
         </div>
       </div>
       <div class="chart-row">
