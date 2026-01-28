@@ -88,6 +88,7 @@
               <select id="fuzzy-model">
                 <option value="operational" selected>Diagnóstico operacional (6 variáveis)</option>
                 <option value="ispc">ISPC triangular (15 variáveis; escala 0–10)</option>
+                <option value="ispc_reduced">ISPC reduzido (10 variáveis; estima 5; escala 0–10)</option>
               </select>
             </div>
           </div>
@@ -192,6 +193,52 @@
               </div>
             </div>
             <p class="lt-muted-2">No ISPC, as 15 variáveis são necessárias para calcular o índice. O sistema normaliza automaticamente para 0–10 e aplica o modelo triangular.</p>
+          </div>
+
+          <div id="fuzzy-fields-ispc-reduced" class="lt-hidden">
+            <div class="grid lt-grid-spacer">
+              <div class="form-group">
+                <label for="ispcR-dmg">DMG:</label>
+                <input type="text" id="ispcR-dmg" placeholder="Exemplo 1,2">
+              </div>
+              <div class="form-group">
+                <label for="ispcR-estoque-c">Estoque de C:</label>
+                <input type="text" id="ispcR-estoque-c" placeholder="Exemplo 2,1">
+              </div>
+              <div class="form-group">
+                <label for="ispcR-na">Na:</label>
+                <input type="text" id="ispcR-na" placeholder="Exemplo 5">
+              </div>
+              <div class="form-group">
+                <label for="ispcR-icv">ICV (%):</label>
+                <input type="text" id="ispcR-icv" placeholder="Exemplo 0,3">
+              </div>
+              <div class="form-group">
+                <label for="ispcR-altura">Altura de Plantas:</label>
+                <input type="text" id="ispcR-altura" placeholder="Exemplo 2,0">
+              </div>
+              <div class="form-group">
+                <label for="ispcR-diam-espiga">Diâmetro espiga:</label>
+                <input type="text" id="ispcR-diam-espiga" placeholder="Exemplo 48">
+              </div>
+              <div class="form-group">
+                <label for="ispcR-comp-espiga">Comprimento espiga:</label>
+                <input type="text" id="ispcR-comp-espiga" placeholder="Exemplo 20">
+              </div>
+              <div class="form-group">
+                <label for="ispcR-n-plantas">Número de plantas/ha:</label>
+                <input type="text" id="ispcR-n-plantas" placeholder="Exemplo 15000">
+              </div>
+              <div class="form-group">
+                <label for="ispcR-n-espigas">N total de espigas/ha:</label>
+                <input type="text" id="ispcR-n-espigas" placeholder="Exemplo 15000">
+              </div>
+              <div class="form-group">
+                <label for="ispcR-produtividade">Produtividade:</label>
+                <input type="text" id="ispcR-produtividade" placeholder="Exemplo 8000">
+              </div>
+            </div>
+            <p class="lt-muted-2">No ISPC reduzido, o sistema estima automaticamente: <strong>DMP</strong>, <strong>RMP</strong>, <strong>Densidade</strong>, <strong>N de espigas comerciais/ha</strong> e <strong>Peso de espigas comerciais/ha</strong> (calibração 0–10 cm). Para máxima fidelidade, use o modo completo (15 variáveis).</p>
           </div>
         </div>
       </div>

@@ -292,6 +292,91 @@
     };
   }
 
+  // ---------------------------------------------------------------------------
+  // ISPC reduzido
+  // - Usuário informa 10 variáveis
+  // - 5 variáveis são estimadas por regressões lineares ajustadas no banco (0–10 cm)
+  // - Em seguida, chamamos o mesmo evaluateISPC() com as 15 entradas completas
+  // ---------------------------------------------------------------------------
+
+  const ISPC_REDUCED_REQUIRED_INPUTS = [
+    'dmg',
+    'estoque_c',
+    'na',
+    'icv',
+    'altura',
+    'diam_espiga',
+    'comp_espiga',
+    'n_plantas',
+    'n_espigas',
+    'produtividade'
+  ];
+
+  const ISPC_REDUCED_MODELS_DADOS_010 = {
+    dmp: { x: 'dmg', intercept: -0.021937873745388907, slope: 0.688446341712679, r2: 0.4874182990823875 },
+    rmp: { x: 'dmg', intercept: -0.010968936872694486, slope: 0.8442231708563392, r2: 0.8511837787415898 },
+    densidade: { x: 'estoque_c', intercept: -0.014961358359012156, slope: 0.9729424750943534, r2: 0.9452489917808462 },
+    n_espigas_com: { x: 'produtividade', intercept: 0, slope: 1, r2: 1 },
+    peso_espigas: { x: 'produtividade', intercept: -102.5840496920282, slope: 0.26059384298886884, r2: 0.9472933079831639 }
+  };
+
+  function evaluateISPCReduced(reducedInputs, options) {
+    const rawReduced = reducedInputs || {};
+
+    const missingReducedInputs = ISPC_REDUCED_REQUIRED_INPUTS.filter((k) => !Number.isFinite(rawReduced[k]));
+    if (missingReducedInputs.length) {
+      return {
+        score: null,
+        classLabel: 'Indeterminado',
+        className: 'na',
+        normalizedInputs: {},
+        topRules: [],
+        missingRawInputs: ISPC_INPUT_ORDER.slice(),
+        missingReducedInputs,
+        estimatedRawInputs: Object.keys(ISPC_REDUCED_MODELS_DADOS_010)
+      };
+    }
+
+    // Hoje suportamos explicitamente a calibração 0–10 cm (dados_010).
+    // O parâmetro options.depthTag fica para futura expansão.
+    const depthTag = options && options.depthTag ? String(options.depthTag) : 'dados_010';
+    const models = (depthTag === 'dados_010') ? ISPC_REDUCED_MODELS_DADOS_010 : ISPC_REDUCED_MODELS_DADOS_010;
+
+    const fullInputs = { ...rawReduced };
+    const estimatedRawInputs = [];
+    const estimatedValues = {};
+    const estimatedModels = {};
+
+    for (const targetKey of Object.keys(models)) {
+      const model = models[targetKey];
+      const xKey = model.x;
+      const xVal = rawReduced[xKey];
+      if (!Number.isFinite(xVal)) {
+        continue;
+      }
+      const yVal = model.intercept + model.slope * xVal;
+      if (Number.isFinite(yVal)) {
+        fullInputs[targetKey] = yVal;
+        estimatedRawInputs.push(targetKey);
+        estimatedValues[targetKey] = yVal;
+        estimatedModels[targetKey] = model;
+      }
+    }
+
+    // Se por algum motivo faltou alguma estimativa, o evaluateISPC vai marcar como Indeterminado.
+    const base = evaluateISPC(fullInputs);
+    return {
+      ...base,
+      mode: 'ispc_reduced',
+      reducedRawInputs: rawReduced,
+      rawInputs: fullInputs,
+      estimatedRawInputs,
+      estimatedValues,
+      estimatedModels,
+      missingReducedInputs
+    };
+  }
+
   function membershipCoverage(pct) {
     const x = normalizeInput(pct, 0, 100);
     if (x === null) return null;
@@ -529,6 +614,7 @@
 
   return {
     evaluate,
-    evaluateISPC
+    evaluateISPC,
+    evaluateISPCReduced
   };
 });

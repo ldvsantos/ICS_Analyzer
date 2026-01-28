@@ -1,0 +1,38 @@
+{
+  "tag": "dados_010",
+  "nTotal": 108,
+  "nUsed": 76,
+  "meanDelta": 0.1509435734088485,
+  "mae": 0.3285422662112268,
+  "rmse": 0.6011397436176391,
+  "maxAbsDelta": 2.236874018069127,
+  "classAgreementPct": 78.94736842105263,
+  "confusion": [
+    [
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      53,
+      14
+    ],
+    [
+      0,
+      2,
+      7
+    ]
+  ],
+  "notes": {
+    "reducedInputsCount": 10,
+    "estimatedInputs": [
+      "dmp",
+      "rmp",
+      "densidade",
+      "n_espigas_com",
+      "peso_espigas"
+    ],
+    "calibration": "modelos lineares ajustados no banco (calibracao primaria: 0-10 cm)"
+  }
+}

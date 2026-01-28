@@ -188,6 +188,123 @@
       }
     }
 
+    if (data.fuzzyISPCReduced && (Number.isFinite(data.fuzzyISPCReduced.score) || (data.fuzzyISPCReduced.missingReducedInputs && data.fuzzyISPCReduced.missingReducedInputs.length))) {
+      let y = afterConclusionsY;
+
+      const hasOperational = Boolean(data.fuzzy && (Number.isFinite(data.fuzzy.priorityScore) || (data.fuzzy.recommendations && data.fuzzy.recommendations.length)));
+      const hasISPC = Boolean(data.fuzzyISPC && (Number.isFinite(data.fuzzyISPC.score) || (data.fuzzyISPC.missingRawInputs && data.fuzzyISPC.missingRawInputs.length)));
+
+      if (hasOperational || hasISPC) {
+        y = 20;
+        doc.addPage();
+      } else if (y > 265) {
+        doc.addPage();
+        y = 20;
+      }
+
+      doc.setFontSize(14);
+      doc.setTextColor(0);
+      doc.text('ISPC reduzido (fuzzy)', 15, y);
+      y += 8;
+
+      doc.setFontSize(11);
+      doc.setTextColor(40);
+      if (Number.isFinite(data.fuzzyISPCReduced.score)) {
+        const label = data.fuzzyISPCReduced.classLabel ? String(data.fuzzyISPCReduced.classLabel) : 'Indeterminado';
+        doc.text(`ISPC reduzido: ${label} (${data.fuzzyISPCReduced.score.toFixed(2)}/10)`, 15, y);
+        y += 7;
+      } else {
+        doc.text('ISPC reduzido: Indeterminado', 15, y);
+        y += 7;
+      }
+
+      if (data.fuzzyISPCReduced.missingReducedInputs && data.fuzzyISPCReduced.missingReducedInputs.length) {
+        const splitMissing = doc.splitTextToSize(`Faltam entradas para calcular (modo reduzido): ${data.fuzzyISPCReduced.missingReducedInputs.join(', ')}`, 180);
+        doc.text(splitMissing, 15, y);
+        y += splitMissing.length * 6;
+      }
+
+      if (data.fuzzyISPCReduced.topRules && data.fuzzyISPCReduced.topRules.length) {
+        const rulesTxt = data.fuzzyISPCReduced.topRules
+          .map((r) => `R${r.idx} (força ${Number.isFinite(r.strength) ? r.strength.toFixed(2) : 'NA'})`)
+          .join(' | ');
+        const splitRules = doc.splitTextToSize(`Regras mais ativadas: ${rulesTxt}`, 180);
+        doc.text(splitRules, 15, y);
+        y += splitRules.length * 6;
+      }
+
+      if (data.fuzzyISPCReduced.reducedRawInputs) {
+        const iu = data.fuzzyISPCReduced.reducedRawInputs;
+        const parts = [];
+        const add = (label, val) => {
+          if (Number.isFinite(val)) parts.push(`${label}: ${val}`);
+        };
+        add('DMG', iu.dmg);
+        add('Estoque de C', iu.estoque_c);
+        add('Na', iu.na);
+        add('ICV(%)', iu.icv);
+        add('Altura', iu.altura);
+        add('Diâmetro espiga', iu.diam_espiga);
+        add('Comprimento espiga', iu.comp_espiga);
+        add('N plantas/ha', iu.n_plantas);
+        add('N espigas/ha', iu.n_espigas);
+        add('Produtividade', iu.produtividade);
+
+        if (parts.length) {
+          const splitInputs = doc.splitTextToSize(`Entradas informadas (10): ${parts.join(' | ')}`, 180);
+          if (y + splitInputs.length * 6 > 280) {
+            doc.addPage();
+            y = 20;
+          }
+          doc.text(splitInputs, 15, y);
+          y += splitInputs.length * 6;
+        }
+      }
+
+      if (data.fuzzyISPCReduced.estimatedValues) {
+        const ev = data.fuzzyISPCReduced.estimatedValues;
+        const parts = [];
+        const add = (label, val) => {
+          if (Number.isFinite(val)) parts.push(`${label}: ${val.toFixed(3)}`);
+        };
+        add('DMP (estim.)', ev.dmp);
+        add('RMP (estim.)', ev.rmp);
+        add('Densidade (estim.)', ev.densidade);
+        add('N espigas comerciais/ha (estim.)', ev.n_espigas_com);
+        add('Peso espigas comerciais/ha (estim.)', ev.peso_espigas);
+
+        if (parts.length) {
+          const splitEst = doc.splitTextToSize(`Entradas estimadas: ${parts.join(' | ')}`, 180);
+          if (y + splitEst.length * 6 > 280) {
+            doc.addPage();
+            y = 20;
+          }
+          doc.text(splitEst, 15, y);
+          y += splitEst.length * 6;
+        }
+      }
+
+      if (data.fuzzyISPCReduced.estimatedModels) {
+        const em = data.fuzzyISPCReduced.estimatedModels;
+        const parts = [];
+        for (const k of Object.keys(em)) {
+          const m = em[k];
+          const r2 = Number.isFinite(m && m.r2) ? m.r2.toFixed(2) : 'NA';
+          const slope = Number.isFinite(m && m.slope) ? m.slope.toFixed(3) : 'NA';
+          const intercept = Number.isFinite(m && m.intercept) ? m.intercept.toFixed(3) : 'NA';
+          parts.push(`${k} <- ${intercept} + ${slope}*${m.x} (R²=${r2})`);
+        }
+        if (parts.length) {
+          const splitModels = doc.splitTextToSize(`Modelos de estimativa (0–10 cm): ${parts.join(' | ')}`, 180);
+          if (y + splitModels.length * 6 > 280) {
+            doc.addPage();
+            y = 20;
+          }
+          doc.text(splitModels, 15, y);
+        }
+      }
+    }
+
     doc.save(`relatorio_longo_prazo_${data.startYear}-${data.endYear}.pdf`);
     return true;
   };

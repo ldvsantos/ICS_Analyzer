@@ -165,6 +165,7 @@ function calcularIQS(dados) {
     const fuzzyModelEl = document.getElementById('fuzzy-model');
     const fuzzyOperationalWrapEl = document.getElementById('fuzzy-fields-operational');
     const fuzzyISPCWrapEl = document.getElementById('fuzzy-fields-ispc');
+    const fuzzyISPCReducedWrapEl = document.getElementById('fuzzy-fields-ispc-reduced');
     const fuzzyCardEl = document.getElementById('fuzzy-card');
     const fuzzyTitleEl = document.getElementById('fuzzy-card-title');
     const fuzzyHintEl = document.getElementById('fuzzy-card-hint');
@@ -182,6 +183,9 @@ function calcularIQS(dados) {
         }
         if (fuzzyISPCWrapEl) {
           fuzzyISPCWrapEl.classList.toggle('lt-hidden', mode !== 'ispc');
+        }
+        if (fuzzyISPCReducedWrapEl) {
+          fuzzyISPCReducedWrapEl.classList.toggle('lt-hidden', mode !== 'ispc_reduced');
         }
       };
       enableFuzzyEl.addEventListener('change', sync);
@@ -219,11 +223,16 @@ function calcularIQS(dados) {
 
         let fuzzyOperationalPayload = null;
         let fuzzyISPCPayload = null;
+          let fuzzyISPCReducedPayload = null;
 
         const fuzzy = (typeof window !== 'undefined') ? window.ICS_Fuzzy : null;
         const mode = fuzzyModelEl ? String(fuzzyModelEl.value) : 'operational';
 
-        if (fuzzy && ((mode === 'operational' && typeof fuzzy.evaluate === 'function') || (mode === 'ispc' && typeof fuzzy.evaluateISPC === 'function'))) {
+        if (fuzzy && (
+          (mode === 'operational' && typeof fuzzy.evaluate === 'function')
+          || (mode === 'ispc' && typeof fuzzy.evaluateISPC === 'function')
+          || (mode === 'ispc_reduced' && typeof fuzzy.evaluateISPCReduced === 'function')
+        )) {
           const enabled = Boolean(enableFuzzyEl && enableFuzzyEl.checked);
 
           if (mode === 'operational') {
@@ -351,6 +360,71 @@ function calcularIQS(dados) {
               fuzzyCardEl.classList.add('lt-hidden');
             }
           }
+
+          if (mode === 'ispc_reduced') {
+            const read = (id) => parseNumberPtBR(document.getElementById(id)?.value);
+            const reducedInputs = {
+              dmg: read('ispcR-dmg'),
+              estoque_c: read('ispcR-estoque-c'),
+              na: read('ispcR-na'),
+              icv: read('ispcR-icv'),
+              altura: read('ispcR-altura'),
+              diam_espiga: read('ispcR-diam-espiga'),
+              comp_espiga: read('ispcR-comp-espiga'),
+              n_plantas: read('ispcR-n-plantas'),
+              n_espigas: read('ispcR-n-espigas'),
+              produtividade: read('ispcR-produtividade')
+            };
+
+            const anyField = Object.values(reducedInputs).some((v) => v !== null);
+            if (enabled || anyField) {
+              fuzzyISPCReducedPayload = fuzzy.evaluateISPCReduced(reducedInputs, { depthTag: 'dados_010' });
+
+              if (fuzzyTitleEl) fuzzyTitleEl.textContent = 'ISPC reduzido (fuzzy)';
+              if (fuzzyHintEl) fuzzyHintEl.textContent = 'Índice ISPC (0–10) com 10 variáveis informadas e 5 estimadas por modelos (calibração 0–10 cm).';
+
+              if (fuzzyCardEl) fuzzyCardEl.classList.remove('lt-hidden');
+
+              if (fuzzyResultEl) {
+                if (Number.isFinite(fuzzyISPCReducedPayload.score)) {
+                  fuzzyResultEl.textContent = `ISPC reduzido ${fuzzyISPCReducedPayload.classLabel} (${formatNumberPtBR(fuzzyISPCReducedPayload.score)}/10)`;
+                } else {
+                  fuzzyResultEl.textContent = 'Indeterminado';
+                }
+              }
+
+              if (fuzzyExplainEl) {
+                if (fuzzyISPCReducedPayload.missingReducedInputs && fuzzyISPCReducedPayload.missingReducedInputs.length) {
+                  fuzzyExplainEl.textContent = `Faltam entradas para calcular (modo reduzido): ${fuzzyISPCReducedPayload.missingReducedInputs.join(', ')}.`;
+                } else if (fuzzyISPCReducedPayload.topRules && fuzzyISPCReducedPayload.topRules.length) {
+                  const rs = fuzzyISPCReducedPayload.topRules
+                    .map((r) => `R${r.idx} (força ${formatNumberPtBR(r.strength)})`)
+                    .join(' | ');
+                  fuzzyExplainEl.textContent = `Regras mais ativadas: ${rs}.`;
+                } else {
+                  fuzzyExplainEl.textContent = 'Sem regras ativadas com os dados informados.';
+                }
+              }
+
+              if (fuzzyRecListEl) {
+                fuzzyRecListEl.innerHTML = '';
+                if (fuzzyISPCReducedPayload.missingReducedInputs && fuzzyISPCReducedPayload.missingReducedInputs.length) {
+                  const li = document.createElement('li');
+                  li.textContent = 'Preencha todas as 10 variáveis do modo reduzido para obter o ISPC.';
+                  fuzzyRecListEl.appendChild(li);
+                } else {
+                  const li = document.createElement('li');
+                  const est = (fuzzyISPCReducedPayload.estimatedRawInputs && fuzzyISPCReducedPayload.estimatedRawInputs.length)
+                    ? `Variáveis estimadas: ${fuzzyISPCReducedPayload.estimatedRawInputs.join(', ')}.`
+                    : 'Algumas variáveis podem ser estimadas no modo reduzido.';
+                  li.textContent = `Modelo ISPC reduzido: use o PDF para registrar entradas, estimativas e score. ${est}`;
+                  fuzzyRecListEl.appendChild(li);
+                }
+              }
+            } else if (fuzzyCardEl) {
+              fuzzyCardEl.classList.add('lt-hidden');
+            }
+          }
         } else if (fuzzyCardEl) {
           fuzzyCardEl.classList.add('lt-hidden');
         }
@@ -377,7 +451,8 @@ function calcularIQS(dados) {
           // Compatibilidade: mantemos data.fuzzy com o operacional
           fuzzy: fuzzyOperationalPayload,
           fuzzyOperational: fuzzyOperationalPayload,
-          fuzzyISPC: fuzzyISPCPayload
+          fuzzyISPC: fuzzyISPCPayload,
+          fuzzyISPCReduced: fuzzyISPCReducedPayload
         };
       } catch (error) {
         console.error(error);
