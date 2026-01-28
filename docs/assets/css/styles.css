@@ -229,6 +229,17 @@ img {
 .manual-page .manual-print-meta {
   font-size: 0.9rem;
   color: var(--text-main);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 320px;
+}
+
+.manual-page .manual-print-meta > div {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  align-items: center;
+  gap: 8px;
 }
 
 .manual-page .manual-print-grid {
@@ -270,15 +281,14 @@ img {
 .checklist-input {
   border: none;
   border-bottom: 1.5px solid #333;
-  padding: 4px 2px;
-  font-family: monospace;
-  letter-spacing: 0.5px;
+  padding: 2px 4px;
+  font-family: inherit;
   font-size: 0.95rem;
   background: transparent;
   outline: none;
   width: 100%;
-  max-width: 280px;
   box-sizing: border-box;
+  color: inherit;
 }
 
 .checklist-input:focus {
