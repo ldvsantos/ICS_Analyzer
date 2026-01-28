@@ -9,126 +9,157 @@
   transform: translateY(-100%);
 }
 
-/* Banner Hero */
+/* Banner Hero Moderno com Imagem de Fundo */
 .hero-banner {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  /* Substitua a URL abaixo pela sua imagem de fundo favorita */
+  background: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.7)), url('https://images.unsplash.com/photo-1625246333195-58197bd47d26?q=80&w=1920&auto=format&fit=crop');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed; /* Efeito Parallax simples */
   color: white;
-  padding: 6rem 1rem 10rem 1rem; /* Extra padding bottom for overlap */
+  padding: 8rem 1rem 12rem 1rem;
   text-align: center;
   position: relative;
   overflow: hidden;
 }
 
 .hero-text h2 {
-  font-size: 3rem;
+  font-size: 3.5rem;
   font-weight: 800;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  text-shadow: 0 4px 6px rgba(0,0,0,0.3);
 }
 
 .hero-text .lead {
-  font-size: 1.25rem;
-  color: #cbd5e1;
-  max-width: 700px;
-  margin: 0 auto 2rem auto;
+  font-size: 1.35rem;
+  color: #e2e8f0;
+  max-width: 800px;
+  margin: 0 auto 2.5rem auto;
+  font-weight: 300;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
 .btn-hero {
   display: inline-block;
   background-color: var(--accent);
   color: white;
-  padding: 1rem 2.5rem;
+  padding: 1.2rem 3rem;
   border-radius: 50px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
   transition: all 0.3s;
-  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.5);
+  border: 2px solid transparent;
 }
 
 .btn-hero:hover {
-  background-color: var(--accent-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
+  background-color: transparent;
+  border-color: var(--accent);
+  color: #ffffff;
+  transform: translateY(-4px);
+  box-shadow: 0 15px 30px rgba(37, 99, 235, 0.7);
 }
 
-/* Funcionalidades com imagem e texto */
+/* Funcionalidades - Cards Verticais Modernos */
 .func-section {
-  margin-top: -4.5rem;
-  margin-bottom: 4rem;
+  margin-top: -6rem; /* Sobreposição maior no banner */
+  margin-bottom: 5rem;
   position: relative;
   z-index: 10;
 }
 
 .func-header {
-  background: white;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  padding: 2.5rem 3rem;
+  background: transparent;
+  box-shadow: none;
+  border: none;
+  padding: 0;
   text-align: center;
-  border: 1px solid var(--border-color);
-  margin-bottom: 2.5rem;
+  margin-bottom: 3rem;
 }
 
 .func-header h3 {
-  font-size: 2rem;
-  color: var(--primary);
-  margin-bottom: 0.75rem;
+  color: white; /* Título branco pois está sobre o banner */
+  font-size: 2.2rem;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
 .func-header p {
-  color: var(--text-secondary);
-  font-size: 1rem;
-  max-width: 780px;
-  margin: 0 auto;
+  color: #e2e8f0;
+  font-size: 1.1rem;
 }
 
 .func-grid {
   display: grid;
-  gap: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2.5rem;
+  max-width: 1280px;
+  margin: 0 auto;
 }
 
 .func-card {
-  display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(280px, 1.1fr);
-  gap: 2rem;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
   background: white;
-  border-radius: var(--radius-lg);
-  padding: 2rem;
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: none;
+  height: 100%;
 }
 
+.func-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Removemos a lógica de reverse para padronizar verticalmente */
 .func-card.reverse {
-  grid-template-columns: minmax(280px, 1.1fr) minmax(260px, 1fr);
+  grid-template-columns: 1fr;
 }
 
-.func-card.reverse .func-media {
-  order: 2;
+.func-media {
+  height: 240px;
+  overflow: hidden;
+  position: relative;
 }
 
 .func-media img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border-color);
+  border-radius: 0;
+  border: none;
+  transition: transform 0.5s ease;
+}
+
+.func-card:hover .func-media img {
+  transform: scale(1.05); /* Zoom suave na imagem ao passar o mouse */
+}
+
+.func-text {
+  padding: 2rem;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .func-text h4 {
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   color: var(--primary);
-  margin-bottom: 0.75rem;
+  margin-bottom: 1rem;
+  font-weight: 700;
 }
 
 .func-text p {
-  color: var(--text-secondary);
+  color: #64748b;
   font-size: 1rem;
+  line-height: 1.6;
 }
 
 .func-cta {
-  margin-top: 2.5rem;
+  margin-top: 4rem;
   text-align: center;
 }
 
