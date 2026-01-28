@@ -381,85 +381,123 @@
 
 /* Team Section */
 .team-section {
-  padding: 4rem 1rem 6rem 1rem;
+  padding: 6rem 1rem 8rem 1rem;
   background-color: #f8fafc;
   text-align: center;
 }
 
 .section-title-center {
-  font-size: 2rem;
+  font-size: 2.25rem;
   color: var(--primary);
-  margin-bottom: 3rem;
+  margin-bottom: 4rem;
   position: relative;
   display: inline-block;
+  font-weight: 800;
 }
 
 .section-title-center::after {
   content: '';
   display: block;
-  width: 50%;
-  height: 4px;
+  width: 60%;
+  height: 5px;
   background: var(--accent);
-  margin: 0.5rem auto 0 auto;
-  border-radius: 2px;
+  margin: 1rem auto 0 auto;
+  border-radius: 4px;
 }
 
 .team-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 2rem;
-  max-width: 1000px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 3rem;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
 .team-card {
-  background: white;
-  padding: 2rem;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  border: 1px solid var(--border-color);
+  background: transparent; /* Card transparente como na Embrapa/Institucional muitas vezes */
+  padding: 1rem;
+  border-radius: 16px; 
+  /* Sem borda ou shadow no card em si para focar no avatar, ou um shadow bem leve */
+  box-shadow: none; 
+  transition: transform 0.3s ease;
+  border: none;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
 .team-card:hover {
-  transform: translateY(-5px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--accent);
+  transform: translateY(-8px);
 }
 
 .member-avatar {
-  width: 80px;
-  height: 80px;
-  background-color: var(--primary-light);
-  color: white;
+  width: 180px; /* Aumento significativo (era 80px) */
+  height: 180px;
+  background-color: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  font-size: 2rem;
   font-weight: 700;
-  margin-bottom: 1rem;
-  border: 4px solid #e2e8f0;
-  overflow: hidden; /* Ensure image clips to circle */
+  margin-bottom: 1.5rem;
+  /* Sombra elegante na esfera */
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  border: 5px solid white; /* Borda branca para destacar do fundo */
+  overflow: hidden;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.team-card:hover .member-avatar {
+  box-shadow: 0 20px 25px -5px rgba(37, 99, 235, 0.2), 0 8px 10px -6px rgba(37, 99, 235, 0.2);
+  border-color: var(--accent);
 }
 
 .member-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.team-card:hover .member-avatar img {
+  transform: scale(1.1);
 }
 
 .team-card h4 {
   color: var(--primary);
   margin-bottom: 0.5rem;
-  font-size: 1.15rem;
-  overflow-wrap: anywhere;
+  font-size: 1.35rem;
+  font-weight: 700;
 }
 
 .team-card .role {
+  color: #334155;
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+}
+
+.team-card .role-detail {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.lattes-link {
+  display: inline-block;
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 1px dotted var(--accent);
+  transition: all 0.2s;
+}
+
+.lattes-link:hover {
+  color: var(--accent-hover);
+  border-bottom-style: solid;
+}
   color: var(--text-secondary);
   font-size: 0.9rem;
   font-weight: 500;
