@@ -153,4 +153,24 @@
     text-align: center;
     padding: 0.6rem 0.75rem;
   }
+
+  /* Manual: reduce “desktop” spacing and avoid fixed-looking blocks */
+  body.manual-page main.container {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  body.manual-page .card,
+  body.manual-page .manual-figure,
+  body.manual-page .manual-print-sheet {
+    padding: 1rem;
+  }
+
+  body.manual-page .manual-figure.manual-figure--photo {
+    max-width: 100%;
+  }
+
+  body.manual-page .manual-figure.manual-figure--photo img {
+    max-height: 60vh;
+  }
 }
