@@ -126,4 +126,8 @@
   body.manual-page .manual-print-grid {
     grid-template-columns: 1fr !important;
   }
+
+  body.manual-page .manual-figure.manual-figure--photo img {
+    max-height: 320px;
+  }
 }

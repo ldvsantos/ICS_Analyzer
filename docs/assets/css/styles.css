@@ -125,10 +125,22 @@ img {
   padding: 12px;
 }
 
+/* Photos in the manual (operator / apparatus): keep them visually smaller */
+.manual-page .manual-figure.manual-figure--photo {
+  max-width: 760px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .manual-page .manual-figure img {
   width: 100%;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
+}
+
+.manual-page .manual-figure.manual-figure--photo img {
+  max-height: 440px;
+  object-fit: contain;
 }
 
 .manual-page .manual-figure figcaption {
