@@ -131,3 +131,26 @@
     max-height: 320px;
   }
 }
+
+/* Phone-sized navigation: stack links vertically for true mobile UX */
+@media screen and (max-width: 640px), screen and (max-device-width: 640px) {
+  header nav,
+  .header nav,
+  .nav-main {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0.35rem;
+  }
+
+  header nav a,
+  .header nav a,
+  .nav-main a,
+  header .nav-link,
+  .header .nav-link {
+    display: block;
+    width: 100%;
+    text-align: center;
+    padding: 0.6rem 0.75rem;
+  }
+}
