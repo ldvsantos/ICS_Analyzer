@@ -303,14 +303,14 @@ function calcularIQS(dados) {
             if (enabled || anyField) {
               fuzzyISPCReducedPayload = fuzzy.evaluateISPCReduced(reducedInputs, { depthTag: 'dados_010' });
 
-              if (fuzzyTitleEl) fuzzyTitleEl.textContent = 'ISPC reduzido (fuzzy)';
+              if (fuzzyTitleEl) fuzzyTitleEl.textContent = 'ISPC (fuzzy)';
               if (fuzzyHintEl) fuzzyHintEl.textContent = 'Índice ISPC (0–10) com 10 variáveis informadas e 5 estimadas por modelos (calibração 0–10 cm).';
 
               if (fuzzyCardEl) fuzzyCardEl.classList.remove('lt-hidden');
 
               if (fuzzyResultEl) {
                 if (Number.isFinite(fuzzyISPCReducedPayload.score)) {
-                  fuzzyResultEl.textContent = `ISPC reduzido ${fuzzyISPCReducedPayload.classLabel} (${formatNumberPtBR(fuzzyISPCReducedPayload.score)}/10)`;
+                  fuzzyResultEl.textContent = `ISPC ${fuzzyISPCReducedPayload.classLabel} (${formatNumberPtBR(fuzzyISPCReducedPayload.score)}/10)`;
                 } else {
                   fuzzyResultEl.textContent = 'Indeterminado';
                 }
@@ -340,7 +340,7 @@ function calcularIQS(dados) {
                   const est = (fuzzyISPCReducedPayload.estimatedRawInputs && fuzzyISPCReducedPayload.estimatedRawInputs.length)
                     ? `Variáveis estimadas: ${fuzzyISPCReducedPayload.estimatedRawInputs.join(', ')}.`
                     : 'Algumas variáveis podem ser estimadas no modo reduzido.';
-                  li.textContent = `Modelo ISPC reduzido: use o PDF para registrar entradas, estimativas e score. ${est}`;
+                  li.textContent = `Modelo ISPC: use o PDF para registrar entradas, estimativas e score. ${est}`;
                   fuzzyRecListEl.appendChild(li);
                 }
               }

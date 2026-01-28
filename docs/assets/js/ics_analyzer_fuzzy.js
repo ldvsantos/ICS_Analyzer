@@ -293,7 +293,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // ISPC reduzido
+  // ISPC
   // - Usuário informa 10 variáveis
   // - 5 variáveis são estimadas por regressões lineares ajustadas no banco (0–10 cm)
   // - Em seguida, chamamos o mesmo evaluateISPC() com as 15 entradas completas

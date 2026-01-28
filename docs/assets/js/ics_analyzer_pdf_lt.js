@@ -127,17 +127,17 @@
 
       doc.setFontSize(14);
       doc.setTextColor(0);
-      doc.text('ISPC reduzido (fuzzy)', 15, y);
+      doc.text('ISPC (fuzzy)', 15, y);
       y += 8;
 
       doc.setFontSize(11);
       doc.setTextColor(40);
       if (Number.isFinite(data.fuzzyISPCReduced.score)) {
         const label = data.fuzzyISPCReduced.classLabel ? String(data.fuzzyISPCReduced.classLabel) : 'Indeterminado';
-        doc.text(`ISPC reduzido: ${label} (${data.fuzzyISPCReduced.score.toFixed(2)}/10)`, 15, y);
+        doc.text(`ISPC: ${label} (${data.fuzzyISPCReduced.score.toFixed(2)}/10)`, 15, y);
         y += 7;
       } else {
-        doc.text('ISPC reduzido: Indeterminado', 15, y);
+        doc.text('ISPC: Indeterminado', 15, y);
         y += 7;
       }
 

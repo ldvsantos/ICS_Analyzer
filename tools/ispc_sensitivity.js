@@ -135,7 +135,7 @@ function renderMarkdown(summary) {
   const fmt = (v, digits) => (Number.isFinite(v) ? v.toFixed(digits) : 'NA');
 
   const lines = [];
-  lines.push(`# Analise de sensibilidade - ISPC reduzido (${summary.tag})`);
+  lines.push(`# Analise de sensibilidade - ISPC (${summary.tag})`);
   lines.push('');
   lines.push(`- Total de registros: **${summary.nTotal}**`);
   lines.push(`- Registros validos (comparaveis): **${summary.nUsed}**`);

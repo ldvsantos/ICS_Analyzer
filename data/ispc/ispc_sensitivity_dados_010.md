@@ -1,4 +1,4 @@
-# Analise de sensibilidade - ISPC reduzido (dados_010)
+# Analise de sensibilidade - ISPC (dados_010)
 
 - Total de registros: **108**
 - Registros validos (comparaveis): **76**
