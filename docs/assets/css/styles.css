@@ -267,6 +267,30 @@ img {
   transform: translateY(2px);
 }
 
+.checklist-input {
+  border: none;
+  border-bottom: 1.5px solid #333;
+  padding: 4px 2px;
+  font-family: monospace;
+  letter-spacing: 0.5px;
+  font-size: 0.95rem;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  max-width: 280px;
+  box-sizing: border-box;
+}
+
+.checklist-input:focus {
+  border-bottom-color: #1e3a8a;
+  background-color: #f0f9ff;
+}
+
+.checklist-input::placeholder {
+  color: #94a3b8;
+  font-style: italic;
+}
+
 .manual-page .manual-print-notes {
   margin-top: 12px;
   border-top: 1px solid var(--border-color);
