@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ICS Analyzer | Página Inicial</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
-  <link rel="stylesheet" href="assets/css/styles.css?v=2026-01-27-1" />
-  <link rel="stylesheet" href="assets/css/embrapa_theme.css?v=2026-01-27-1" />
-  <link rel="stylesheet" href="assets/css/mobile.css?v=2026-01-27-1" media="(max-width: 1024px)" />
+  <link rel="stylesheet" href="assets/css/styles.css?v=2026-01-28-1" />
+  <link rel="stylesheet" href="assets/css/embrapa_theme.css?v=2026-01-28-1" />
+  <link rel="stylesheet" href="assets/css/mobile.css?v=2026-01-28-1" media="(max-width: 1024px)" />
 </head>
 <body>
   <header>
@@ -40,38 +40,46 @@
       </div>
     </section>
 
-    <!-- 3 Cards Section (overlapping hero) -->
-    <section class="container features-section">
-      <div class="features-grid">
-        <div class="feature-card">
-          <div class="icon-circle">📊</div>
-          <h3>Entrada de Dados</h3>
-          <p>Interface intuitiva para registro de leituras horizontais e verticais em campo.</p>
-        </div>
-        <div class="feature-card active-card">
-          <div class="icon-circle">⚡</div>
-          <h3>Cálculo Automático</h3>
-          <p>Processamento instantâneo do Índice de Cobertura do Solo (ICS) com precisão.</p>
-        </div>
-        <div class="feature-card">
-          <div class="icon-circle">📑</div>
-          <h3>Relatório PDF</h3>
-          <p>Geração de relatórios técnicos completos prontos para impressão ou arquivo.</p>
-        </div>
+    <section class="container func-section">
+      <div class="func-header">
+        <h3>Funcionalidades do ICS Analyzer</h3>
+        <p>Apresentação direta das etapas operacionais com foco em campo, consistência analítica e entrega de relatório técnico.</p>
       </div>
-    </section>
 
-    <!-- Detailed Content Section -->
-    <section class="container content-section">
-      <div class="content-row">
-        <div class="content-text">
-          <h3>Sobre o Método ICS</h3>
-          <p>O Índice de Cobertura do Solo é uma métrica fundamental para avaliação da proteção do solo contra erosão. Este sistema automatiza o método de interseção, garantindo rapidez e padronização nos resultados.</p>
-        </div>
-        <div class="content-image">
-          <!-- ICS Graphical Abstract -->
-           <img src="assets/img/abstract_grafico.png" alt="Resumo Gráfico do Método ICS" style="width: 100%; height: auto; border-radius: var(--radius-lg); box-shadow: var(--shadow-md);">
-        </div>
+      <div class="func-grid">
+        <article class="func-card">
+          <div class="func-media">
+            <img src="assets/img/aparato_exemplo.png" alt="Coleta e posicionamento do retículo no campo">
+          </div>
+          <div class="func-text">
+            <h4>Entrada de dados em campo</h4>
+            <p>Registro rápido das leituras horizontais e verticais, com organização automática por ponto amostral e validação imediata.</p>
+          </div>
+        </article>
+
+        <article class="func-card reverse">
+          <div class="func-media">
+            <img src="assets/img/figura_reticulo_explicacao.png" alt="Lógica de leitura do retículo e cobertura">
+          </div>
+          <div class="func-text">
+            <h4>Cálculo e indicadores</h4>
+            <p>Processamento do ICS, dispersão e variabilidade com atualização simultânea dos indicadores complementares.</p>
+          </div>
+        </article>
+
+        <article class="func-card">
+          <div class="func-media">
+            <img src="assets/img/abstract_grafico.png" alt="Resumo gráfico do método e resultados">
+          </div>
+          <div class="func-text">
+            <h4>Relatório técnico em PDF</h4>
+            <p>Exportação do relatório com layout padronizado, gráficos e metadados ambientais integrados à análise.</p>
+          </div>
+        </article>
+      </div>
+
+      <div class="func-cta">
+        <a class="btn-hero" href="sistema.html">ACESSAR SISTEMA</a>
       </div>
     </section>
 

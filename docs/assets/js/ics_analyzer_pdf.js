@@ -66,312 +66,6 @@ function safeCalcular() {
   }
 }
 
-function setClimaStatus(texto, opts = {}) {
-  const box = document.getElementById('climaStatus');
-  const textEl = document.getElementById('climaStatusText');
-  const spinner = document.getElementById('climaSpinner');
-
-  if (!box || !textEl || !spinner) return;
-
-  const { type = 'info', loading = false, show = true } = opts;
-
-  textEl.textContent = String(texto ?? '');
-  spinner.classList.toggle('hidden', !loading);
-  box.classList.remove('status-info', 'status-success', 'status-error');
-  box.classList.add(`status-${type}`);
-  box.classList.toggle('hidden', !show);
-}
-
-function clearClimaStatus() {
-  setClimaStatus('', { show: false, loading: false });
-}
-
-function hexToRgb(hex) {
-  const clean = String(hex).replace('#', '').trim();
-  if (clean.length !== 6) return { r: 0, g: 0, b: 0 };
-  const r = parseInt(clean.slice(0, 2), 16);
-  const g = parseInt(clean.slice(2, 4), 16);
-  const b = parseInt(clean.slice(4, 6), 16);
-  return { r, g, b };
-}
-
-function clamp01(x) {
-  if (!Number.isFinite(x)) return 0;
-  return Math.max(0, Math.min(1, x));
-}
-
-function quantileFromSorted(sorted, q) {
-  const n = sorted.length;
-  if (n === 0) return NaN;
-  if (n === 1) return sorted[0];
-  const pos = (n - 1) * q;
-  const base = Math.floor(pos);
-  const rest = pos - base;
-  const a = sorted[base];
-  const b = sorted[Math.min(base + 1, n - 1)];
-  return a + (b - a) * rest;
-}
-
-function calcularBoxplotStats(valores) {
-  const arr = (valores || []).filter((v) => Number.isFinite(v)).slice().sort((a, b) => a - b);
-  const n = arr.length;
-  if (n === 0) return null;
-  const soma = arr.reduce((acc, v) => acc + v, 0);
-  return {
-    n,
-    min: arr[0],
-    q1: quantileFromSorted(arr, 0.25),
-    mediana: quantileFromSorted(arr, 0.5),
-    q3: quantileFromSorted(arr, 0.75),
-    max: arr[n - 1],
-    media: soma / n,
-  };
-}
-
-function desenharRetanguloRachurado(doc, x, y, w, h, opts) {
-  const { fillRgb, hatchRgb, spacing = 2.5, angle = 45, lineWidth = 0.2 } = opts || {};
-
-  if (fillRgb) {
-    doc.setFillColor(fillRgb.r, fillRgb.g, fillRgb.b);
-    doc.rect(x, y, w, h, 'F');
-  }
-
-  if (!hatchRgb) return;
-
-  doc.setDrawColor(hatchRgb.r, hatchRgb.g, hatchRgb.b);
-  doc.setLineWidth(lineWidth);
-
-  // Recorte (clip) para as linhas não “vazarem” para fora do retângulo.
-  const canClip = typeof doc.saveGraphicsState === 'function' && typeof doc.restoreGraphicsState === 'function' && typeof doc.clip === 'function';
-  if (canClip) {
-    doc.saveGraphicsState();
-    doc.rect(x, y, w, h);
-    doc.clip();
-    if (typeof doc.discardPath === 'function') doc.discardPath();
-  }
-
-  const rad = (angle * Math.PI) / 180;
-  const cos = Math.cos(rad);
-  const sin = Math.sin(rad);
-
-  const diag = Math.sqrt(w * w + h * h);
-  const steps = Math.ceil((w + h) / spacing) + 2;
-  for (let i = -steps; i <= steps; i++) {
-    const ox = x + i * spacing;
-    const oy = y;
-    const x1 = ox;
-    const y1 = oy;
-    const x2 = ox + diag * cos;
-    const y2 = oy + diag * sin;
-    doc.line(x1, y1, x2, y2);
-  }
-
-  if (canClip) {
-    doc.restoreGraphicsState();
-  }
-}
-
-function desenharBoxplotICS(doc, x, y, w, h, valores, theme) {
-  const stats = calcularBoxplotStats(valores);
-  if (!stats) return;
-
-  const { boxFillHex = '#CCEBC5', boxHatchHex = '#383838', panelHex = '#EAEAEA' } = theme || {};
-  const panel = hexToRgb(panelHex);
-  const boxFill = hexToRgb(boxFillHex);
-  const hatch = hexToRgb(boxHatchHex);
-
-  doc.setFillColor(panel.r, panel.g, panel.b);
-  doc.setDrawColor(200);
-  doc.setLineWidth(0.2);
-  doc.rect(x, y, w, h, 'FD');
-
-  const pad = 6;
-  const plotX = x + pad;
-  const plotY = y + 6;
-  const plotW = w - pad * 2;
-  const plotH = h - 12;
-
-  const yFromVal = (v) => plotY + (1 - clamp01(v)) * plotH;
-
-  doc.setDrawColor(120);
-  doc.setLineWidth(0.2);
-  doc.line(plotX, plotY, plotX, plotY + plotH);
-
-  doc.setFontSize(7);
-  doc.setTextColor(90);
-  const ticks = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
-  ticks.forEach((t) => {
-    const ty = yFromVal(t);
-    doc.setDrawColor(180);
-    doc.line(plotX, ty, plotX + plotW, ty);
-    doc.setDrawColor(120);
-    doc.line(plotX - 1.2, ty, plotX, ty);
-    doc.text(t.toFixed(2), plotX - 4.5, ty + 2, { align: 'right' });
-  });
-  doc.setTextColor(0);
-
-  const cx = plotX + plotW * 0.62;
-  const boxW = Math.min(22, plotW * 0.35);
-  const boxX = cx - boxW / 2;
-  const yQ1 = yFromVal(stats.q1);
-  const yQ3 = yFromVal(stats.q3);
-  const yMed = yFromVal(stats.mediana);
-  const yMin = yFromVal(stats.min);
-  const yMax = yFromVal(stats.max);
-
-  desenharRetanguloRachurado(doc, boxX, yQ3, boxW, Math.max(0.01, yQ1 - yQ3), {
-    fillRgb: boxFill,
-    hatchRgb: hatch,
-    spacing: 2.3,
-    angle: 45,
-    lineWidth: 0.15,
-  });
-  doc.setDrawColor(60);
-  doc.setLineWidth(0.3);
-  doc.rect(boxX, yQ3, boxW, Math.max(0.01, yQ1 - yQ3));
-
-  doc.setDrawColor(0);
-  doc.setLineWidth(0.6);
-  doc.line(boxX, yMed, boxX + boxW, yMed);
-
-  doc.setLineWidth(0.3);
-  doc.line(cx, yQ3, cx, yMax);
-  doc.line(cx, yQ1, cx, yMin);
-  doc.line(cx - boxW * 0.35, yMax, cx + boxW * 0.35, yMax);
-  doc.line(cx - boxW * 0.35, yMin, cx + boxW * 0.35, yMin);
-
-  const jitter = Math.min(6, boxW * 0.35);
-  doc.setDrawColor(30);
-  doc.setFillColor(30);
-  doc.setLineWidth(0.2);
-  (valores || []).forEach((v, i) => {
-    const px = cx + ((i % 7) - 3) * (jitter / 6);
-    const py = yFromVal(v);
-    doc.circle(px, py, 0.55, 'F');
-  });
-
-  doc.setFontSize(8);
-  doc.setTextColor(40);
-  doc.text('Boxplot (ICS)', x + 6, y + h - 4);
-  doc.setTextColor(0);
-}
-
-function desenharAreaChartICS(doc, x, y, w, h, valores, theme) {
-  const { panelHex = '#FFFFFF', lineHex = '#1a5f7a', fillHex = '#b7e4c7' } = theme || {};
-  const panel = hexToRgb(panelHex);
-  const line = hexToRgb(lineHex);
-  const fill = hexToRgb(fillHex);
-
-  // Fundo
-  doc.setFillColor(panel.r, panel.g, panel.b);
-  doc.setDrawColor(200);
-  doc.setLineWidth(0.2);
-  doc.rect(x, y, w, h, 'FD');
-
-  const padLeft = 10;
-  const padRight = 5;
-  const padTop = 5;
-  const padBottom = 10;
-
-  const plotX = x + padLeft;
-  const plotY = y + padTop;
-  const plotW = w - (padLeft + padRight);
-  const plotH = h - (padTop + padBottom);
-
-  // Escalas Eixos
-  // X: 1 até n (valores.length)
-  const n = valores.length;
-  // Y: 0.0 a 1.0 (fixo)
-
-  const getX = (i) => plotX + (i / (n - 1)) * plotW;
-  const getY = (v) => plotY + (1 - clamp01(v)) * plotH;
-
-  // Desenhar Eixos e Grid Y
-  doc.setDrawColor(220);
-  doc.setLineWidth(0.1);
-  const ticksY = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
-  doc.setFontSize(7);
-  doc.setTextColor(100);
-
-  ticksY.forEach(t => {
-    const yy = getY(t);
-    doc.line(plotX, yy, plotX + plotW, yy);
-    doc.text(`${Math.round(t * 100)}%`, plotX - 2, yy + 1, { align: 'right' });
-  });
-
-  // Grid X (opcional, só ticks)
-  for (let i = 0; i < n; i++) {
-    const xx = getX(i);
-    // apenas ticks nas bordas ou em todos? Todos
-    doc.line(xx, plotY + plotH, xx, plotY + plotH + 1);
-    // Labels X (ex: 1, 5, 10...)
-    if (n <= 16 || i % 2 === 0) { // Se muitos pontos, pula labels
-      doc.text(String(i + 1), xx, plotY + plotH + 4, { align: 'center' });
-    }
-  }
-
-  // Desenhar Área (Polígono)
-  // Começa em (0,0) -> (0, v0) -> ... -> (n, vn) -> (n, 0)
-  
-  if (n > 1) {
-    const lines = [];
-    // Ponto inicial base (bottom-left)
-    lines.push({ op: 'm', c: [getX(0), plotY + plotH] });
-    
-    // Pontos dos dados
-    valores.forEach((v, i) => {
-      lines.push({ op: 'l', c: [getX(i), getY(v)] });
-    });
-    
-    // Ponto final base (bottom-right)
-    lines.push({ op: 'l', c: [getX(n - 1), plotY + plotH] });
-    
-    // Fechar
-    lines.push({ op: 'h' });
-
-    doc.setFillColor(fill.r, fill.g, fill.b);
-    // doc.path(lines) é suportado no jsPDF moderno? Sim, ou usamos lines.
-    // Alternativa segura: construir array de coords e usar .lines() ou triangle strip
-    // Vamos usar linhas manuais ou triangle strip? path é melhor.
-    // Mas jsPDF `path` api pode ser complexa. Vamos desenhar contorno preenchido.
-    
-    doc.saveGraphicsState();
-    doc.setDrawColor(line.r, line.g, line.b); // Cor da linha, mas aqui é area
-    // Hack: desenhar shape fechado
-    doc.moveTo(getX(0), plotY + plotH);
-    valores.forEach((v, i) => doc.lineTo(getX(i), getY(v)));
-    doc.lineTo(getX(n - 1), plotY + plotH);
-    // jsPDF provides close() to close the current path, not closePath().
-    if (typeof doc.close === 'function') doc.close();
-    doc.fill(); 
-    doc.restoreGraphicsState();
-    
-    // Desenhar Linha Grossa por cima
-    doc.setDrawColor(line.r, line.g, line.b);
-    doc.setLineWidth(0.4);
-    valores.forEach((v, i) => {
-      if (i === 0) doc.moveTo(getX(i), getY(v));
-      else doc.lineTo(getX(i), getY(v));
-    });
-    doc.stroke();
-  }
-
-  // Títulos Eixos
-  doc.setTextColor(50);
-
-  // Eixo Y: um pouco menor e mais próximo do eixo
-  const yAxisLabel = 'Cálculo de Índices de Cobertura do Solo ICS (%)';
-  doc.setFontSize(7);
-  // jsPDF: com rotação, o alinhamento pode ficar “estranho”; centraliza manualmente.
-  // getTextWidth retorna largura em mm para o fontSize atual.
-  const yAxisLabelLen = doc.getTextWidth(yAxisLabel);
-  doc.text(yAxisLabel, plotX - 8, plotY + (plotH / 2) + (yAxisLabelLen / 2), { angle: 90, align: 'left' });
-
-  // Eixo X
-  doc.setFontSize(8);
-  doc.text('Pontos de Leitura (L)', plotX + plotW / 2, plotY + plotH + 9, { align: 'center' });
-}
-
 function setupCampoCalibracao() {
   const modoEl = document.getElementById('campoModo');
   const grpLargura = document.getElementById('grpCampoLargura');
@@ -417,91 +111,6 @@ function calcularAreaCampo() {
   throw new Error('Selecione a geometria do campo (retangular) ou deixe como “Não informar”.');
 }
 
-function parseNumberPtBr(raw) {
-  const s = String(raw ?? '').trim();
-  if (s === '') return null;
-  const n = Number.parseFloat(s.replace(',', '.'));
-  return Number.isFinite(n) ? n : null;
-}
-
-function sumArray(values) {
-  return (values || []).reduce((acc, v) => acc + (Number.isFinite(v) ? v : 0), 0);
-}
-
-function sumLast(values, n) {
-  const arr = (values || []).filter((v) => Number.isFinite(v));
-  const slice = arr.slice(Math.max(0, arr.length - n));
-  return sumArray(slice);
-}
-
-function avgArray(values) {
-  const arr = (values || []).filter((v) => Number.isFinite(v));
-  if (arr.length === 0) return null;
-  return sumArray(arr) / arr.length;
-}
-
-function clamp01(x) {
-  if (!Number.isFinite(x)) return 0;
-  return Math.max(0, Math.min(1, x));
-}
-
-function textureToKNorm(textura) {
-  const t = String(textura ?? '').toLowerCase();
-  if (t === 'arenosa') return 0.8;
-  if (t === 'media') return 0.5;
-  if (t === 'argilosa') return 0.3;
-  return null;
-}
-
-function textureToKUsle(textura) {
-  const t = String(textura ?? '').toLowerCase();
-  // Aproximações operacionais (ordem de grandeza). Não usar como laudo.
-  if (t === 'arenosa') return 0.05;
-  if (t === 'media') return 0.03;
-  if (t === 'argilosa') return 0.02;
-  return null;
-}
-
-function estimateLSRUSLE(declividadePct, comprimentoM) {
-  const slopePct = Number(declividadePct);
-  const lengthM = Number(comprimentoM);
-  if (!Number.isFinite(slopePct) || !Number.isFinite(lengthM) || lengthM <= 0) return null;
-
-  const s = slopePct / 100;
-  const theta = Math.atan(s);
-  const sinTheta = Math.sin(theta);
-
-  const beta = (sinTheta / 0.0896) / (3 * Math.pow(sinTheta, 0.8) + 0.56);
-  const m = beta / (1 + beta);
-  const L = Math.pow(lengthM / 22.13, m);
-  const S = slopePct < 9 ? (10.8 * sinTheta + 0.03) : (16.8 * sinTheta - 0.50);
-  return L * S;
-}
-
-function estimateRProxyFromPrecipDaily(precipDailyMm) {
-  const arr = (precipDailyMm || []).filter((v) => Number.isFinite(v) && v > 0);
-  if (arr.length === 0) return 0;
-  let sum = 0;
-  for (const mm of arr) sum += Math.pow(mm, 1.5);
-  // Escala escolhida para gerar números em ordem de grandeza útil no app.
-  // É um proxy (sem EI30) — interpretação no modal.
-  return sum * 100;
-}
-
-function classificarRisco(score) {
-  if (!Number.isFinite(score)) return { classe: 'Indisponível', desc: 'Sem dados suficientes' };
-  if (score < 33) return { classe: 'Baixo', desc: 'Condição estrutural mais resiliente para a energia do evento' };
-  if (score < 66) return { classe: 'Médio', desc: 'Risco intermediário, priorizar reforço de cobertura e microconservação' };
-  return { classe: 'Alto', desc: 'Alta sensibilidade, priorizar intervenção conservacionista imediata' };
-}
-
-function classificarIMC(score) {
-  if (!Number.isFinite(score)) return { classe: 'Indisponível', desc: 'Sem dados suficientes' };
-  if (score >= 80) return { classe: 'Ótimo', desc: 'Proteção alta e distribuição mais estável' };
-  if (score >= 60) return { classe: 'Bom', desc: 'Proteção adequada com variabilidade controlável' };
-  if (score >= 40) return { classe: 'Atenção', desc: 'Proteção limitada, risco de hotspots de escoamento' };
-  return { classe: 'Crítico', desc: 'Cobertura insuficiente, alta probabilidade de perda por splash e enxurrada' };
-}
 
 function calcularIndicadoresAvancados(d) {
   const icsMedia = Number.isFinite(d.media) ? d.media : null;
@@ -676,102 +285,6 @@ function atualizarBlocosAvancados(dados) {
   }
 
   return avan;
-}
-
-async function buscarDadosClimaticos() {
-  const btnBuscarClima = document.getElementById('btnBuscarClima');
-  const lat = parseNumberPtBr(document.getElementById('latitude')?.value);
-  const lon = parseNumberPtBr(document.getElementById('longitude')?.value);
-  const inicio = document.getElementById('climaInicio')?.value ?? '';
-  const fim = document.getElementById('climaFim')?.value ?? '';
-
-  if (lat === null || lon === null || !Number.isFinite(lat) || !Number.isFinite(lon)) {
-    setClimaStatus('Erro: informe latitude e longitude válidas para buscar dados climáticos.', { type: 'error', loading: false, show: true });
-    return;
-  }
-  if (inicio === '' || fim === '') {
-    setClimaStatus('Erro: informe início e fim do período climático.', { type: 'error', loading: false, show: true });
-    return;
-  }
-
-  try {
-    setClimaStatus('Buscando dados climáticos (API pública)...', { type: 'info', loading: true, show: true });
-    if (btnBuscarClima) {
-      btnBuscarClima.disabled = true;
-      btnBuscarClima.setAttribute('aria-busy', 'true');
-    }
-
-    const params = new URLSearchParams({
-      latitude: String(lat),
-      longitude: String(lon),
-      start_date: inicio,
-      end_date: fim,
-      daily: 'precipitation_sum,temperature_2m_mean',
-      timezone: 'America/Sao_Paulo',
-    });
-    const url = `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Falha ao consultar clima (HTTP ${res.status})`);
-    const json = await res.json();
-
-    const precip = (json?.daily?.precipitation_sum || []).map((v) => (Number.isFinite(v) ? v : Number(v)));
-    const tmean = (json?.daily?.temperature_2m_mean || []).map((v) => (Number.isFinite(v) ? v : Number(v)));
-
-    const chuvaTotal = sumArray(precip);
-    const chuva7d = sumLast(precip, 7);
-    const chuva30d = sumLast(precip, 30);
-    const maxDia = precip.length ? Math.max(...precip.filter((v) => Number.isFinite(v))) : null;
-    const tempMedia = avgArray(tmean);
-    const rProxy = estimateRProxyFromPrecipDaily(precip);
-
-    window.ultimaClima = {
-      latitude: lat,
-      longitude: lon,
-      inicio,
-      fim,
-      chuvaTotal,
-      chuva7d,
-      chuva30d,
-      maxDia,
-      tempMedia,
-      rProxy,
-      fonte: 'open-meteo',
-      fetchedAt: new Date().toISOString(),
-    };
-
-    if (window.ultimaDados) {
-      window.ultimaDados.latitude = lat;
-      window.ultimaDados.longitude = lon;
-      window.ultimaDados.climaInicio = inicio;
-      window.ultimaDados.climaFim = fim;
-      window.ultimaDados.climaFonte = 'open-meteo';
-      window.ultimaDados.climaChuvaTotalMm = Number.isFinite(chuvaTotal) ? chuvaTotal : null;
-      window.ultimaDados.climaChuva7dMm = Number.isFinite(chuva7d) ? chuva7d : null;
-      window.ultimaDados.climaChuva30dMm = Number.isFinite(chuva30d) ? chuva30d : null;
-      window.ultimaDados.climaChuvaMaxDiaMm = Number.isFinite(maxDia) ? maxDia : null;
-      window.ultimaDados.climaTempMediaC = Number.isFinite(tempMedia) ? tempMedia : null;
-      window.ultimaDados.climaRProxy = Number.isFinite(rProxy) ? rProxy : null;
-    }
-
-    atualizarBlocosAvancados({
-      ...(window.ultimaDados || {}),
-      climaChuvaTotalMm: Number.isFinite(chuvaTotal) ? chuvaTotal : null,
-      climaChuva7dMm: Number.isFinite(chuva7d) ? chuva7d : null,
-      climaChuva30dMm: Number.isFinite(chuva30d) ? chuva30d : null,
-      climaChuvaMaxDiaMm: Number.isFinite(maxDia) ? maxDia : null,
-      climaRProxy: Number.isFinite(rProxy) ? rProxy : null,
-    });
-
-    setClimaStatus('✓ Dados climáticos carregados e integrados à análise.', { type: 'success', loading: false, show: true });
-  } catch (err) {
-    console.error('Erro ao buscar clima:', err);
-    setClimaStatus(`Erro ao buscar clima: ${err?.message || err}`, { type: 'error', loading: false, show: true });
-  } finally {
-    if (btnBuscarClima) {
-      btnBuscarClima.disabled = false;
-      btnBuscarClima.removeAttribute('aria-busy');
-    }
-  }
 }
 
 function calcular() {
@@ -1402,6 +915,13 @@ function exportarPDF() {
     doc.text(valueTxt, bx + labelPartW + 2, y + 5);
   }
 
+  // Presets de layout para caixas de dados gerais
+  const genBoxOptsClassificacao = { labelRatio: 0.35, labelFontSize: 7, valueFontSize: 7 };
+  const genBoxOptsMinMax = { labelRatio: 0.62, labelFontSize: 7, valueFontSize: 7 };
+  const genBoxOptsAreas = { labelRatio: 0.72, labelFontSize: 7, valueFontSize: 7 };
+  const genBoxOptsClimaLinha1 = { labelRatio: 0.68, labelFontSize: 6.5, valueFontSize: 7 };
+  const genBoxOptsClimaLinha2 = { labelRatio: 0.7, labelFontSize: 7, valueFontSize: 7 };
+
   drawGenBox('No. Leituras', d.numLeituras, 0);
   drawGenBox('ICS Médio', d.media.toFixed(3), 1);
   drawGenBox('Cobertura (%)', d.percentual.toFixed(1), 2);
@@ -1418,10 +938,9 @@ function exportarPDF() {
 
   // Linha 2: CV, Classe, Amplitude, (Min..Max)
   drawGenBox('CV (%)', cvTxt, 0);
-  // Ajuste: labelRatio menor para dar mais espaço ao valor da Classificação (texto longo)
-  drawGenBox('Classificação', classeTxt, 1, { labelRatio: 0.35, labelFontSize: 7, valueFontSize: 7 });
+  drawGenBox('Classificação', classeTxt, 1, genBoxOptsClassificacao);
   drawGenBox('Amplitude', ampTxt, 2);
-  drawGenBox('Min..Max', `${minTxt}..${maxTxt}`, 3, { labelRatio: 0.62, labelFontSize: 7, valueFontSize: 7 });
+  drawGenBox('Min..Max', `${minTxt}..${maxTxt}`, 3, genBoxOptsMinMax);
 
   y += rowGenH + 5;
 
@@ -1432,11 +951,10 @@ function exportarPDF() {
     const areaCampoTxt = d.areaCampo.toFixed(2);
 
     // Labels longos: usar fonte menor e dar mais largura para o label.
-    const areaBoxOpts = { labelRatio: 0.72, labelFontSize: 7, valueFontSize: 7 };
-    drawGenBox('A campo (m²)', areaCampoTxt, 0, areaBoxOpts);
-    drawGenBox('Área cob. média (m²)', areaMediaTxt, 1, areaBoxOpts);
-    drawGenBox('Área cob. total (m²)', areaTotalTxt, 2, areaBoxOpts);
-    drawGenBox('Dist. visada (m)', d.distVisada || '-', 3, areaBoxOpts);
+    drawGenBox('A campo (m²)', areaCampoTxt, 0, genBoxOptsAreas);
+    drawGenBox('Área cob. média (m²)', areaMediaTxt, 1, genBoxOptsAreas);
+    drawGenBox('Área cob. total (m²)', areaTotalTxt, 2, genBoxOptsAreas);
+    drawGenBox('Dist. visada (m)', d.distVisada || '-', 3, genBoxOptsAreas);
     y += rowGenH + 5;
   }
 
@@ -1451,12 +969,10 @@ function exportarPDF() {
 
     const hasLinha1 = (riscoTxt !== '-') || (exposicaoTxt !== '-') || (chuva7dTxt !== '-') || (chuva30dTxt !== '-');
     if (hasLinha1) {
-      // Ajuste: labelFontSize reduzido para caber "Chuva 7d (mm)" sem cortar
-      const opts = { labelRatio: 0.68, labelFontSize: 6.5, valueFontSize: 7 };
-      drawGenBox('Risco erosão', riscoTxt, 0, opts);
-      drawGenBox('Exposição', exposicaoTxt, 1, opts);
-      drawGenBox('Chuva 7d (mm)', chuva7dTxt, 2, opts);
-      drawGenBox('Chuva 30d (mm)', chuva30dTxt, 3, opts);
+      drawGenBox('Risco erosão', riscoTxt, 0, genBoxOptsClimaLinha1);
+      drawGenBox('Exposição', exposicaoTxt, 1, genBoxOptsClimaLinha1);
+      drawGenBox('Chuva 7d (mm)', chuva7dTxt, 2, genBoxOptsClimaLinha1);
+      drawGenBox('Chuva 30d (mm)', chuva30dTxt, 3, genBoxOptsClimaLinha1);
       y += rowGenH + 5;
     }
 
@@ -1467,11 +983,10 @@ function exportarPDF() {
     const tempTxt = Number.isFinite(d.climaTempMediaC) ? d.climaTempMediaC.toFixed(1) : '-';
     const hasLinha2 = (declivOut !== '-') || (texturaOut !== '-') || (maxDiaTxt !== '-') || (tempTxt !== '-');
     if (hasLinha2) {
-      const opts2 = { labelRatio: 0.7, labelFontSize: 7, valueFontSize: 7 };
-      drawGenBox('Declividade (%)', declivOut, 0, opts2);
-      drawGenBox('Textura', texturaOut, 1, opts2);
-      drawGenBox('Máx dia (mm)', maxDiaTxt, 2, opts2);
-      drawGenBox('T média (°C)', tempTxt, 3, opts2);
+      drawGenBox('Declividade (%)', declivOut, 0, genBoxOptsClimaLinha2);
+      drawGenBox('Textura', texturaOut, 1, genBoxOptsClimaLinha2);
+      drawGenBox('Máx dia (mm)', maxDiaTxt, 2, genBoxOptsClimaLinha2);
+      drawGenBox('T média (°C)', tempTxt, 3, genBoxOptsClimaLinha2);
       y += rowGenH + 5;
     }
   }
@@ -1687,133 +1202,3 @@ function limpar() {
   setupLeituras();
   setupCampoCalibracao();
 }
-
-window.addEventListener('load', () => {
-  // Exposição explícita para handlers inline e para depuração.
-  window.calcular = calcular;
-  window.safeCalcular = safeCalcular;
-
-  const numLeiturasEl = document.getElementById('numLeituras');
-  const btnCalcular = document.getElementById('btnCalcular');
-  const btnExportar = document.getElementById('btnExportarPDF');
-  const btnLimpar = document.getElementById('btnLimpar');
-  const btnBuscarClima = document.getElementById('btnBuscarClima');
-
-  const campoModoEl = document.getElementById('campoModo');
-
-  // Modais (ajuda + interpretação)
-  const registerModal = ({ openBtnId, modalId, closeBtnId }) => {
-    const openBtn = document.getElementById(openBtnId);
-    const modal = document.getElementById(modalId);
-    const closeBtn = document.getElementById(closeBtnId);
-
-    if (!modal) return { isOpen: () => false, setOpen: () => {} };
-
-    const setOpen = (open) => {
-      modal.classList.toggle('open', open);
-      modal.setAttribute('aria-hidden', open ? 'false' : 'true');
-      if (open) closeBtn?.focus?.();
-      else openBtn?.focus?.();
-    };
-
-    if (openBtn) openBtn.addEventListener('click', () => setOpen(true));
-    if (closeBtn) closeBtn.addEventListener('click', () => setOpen(false));
-
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) setOpen(false);
-    });
-
-    return {
-      isOpen: () => modal.classList.contains('open'),
-      setOpen,
-    };
-  };
-
-  const modalAjuda = registerModal({ openBtnId: 'btnAjudaLeituras', modalId: 'ajudaModal', closeBtnId: 'btnFecharAjuda' });
-  const modalRisco = registerModal({ openBtnId: 'btnAjudaRisco', modalId: 'riscoModal', closeBtnId: 'btnFecharRisco' });
-  const modalIMC = registerModal({ openBtnId: 'btnAjudaIMC', modalId: 'imcModal', closeBtnId: 'btnFecharIMC' });
-  const modalCV = registerModal({ openBtnId: 'btnAjudaCV', modalId: 'cvModal', closeBtnId: 'btnFecharCV' });
-  const modalRange = registerModal({ openBtnId: 'btnAjudaRange', modalId: 'rangeModal', closeBtnId: 'btnFecharRange' });
-  const modalUSLE = registerModal({ openBtnId: 'btnAjudaUSLE', modalId: 'usleModal', closeBtnId: 'btnFecharUSLE' });
-
-  if (numLeiturasEl) {
-    numLeiturasEl.addEventListener('change', setupLeituras);
-  }
-
-  if (campoModoEl) {
-    campoModoEl.addEventListener('change', setupCampoCalibracao);
-  }
-
-  window.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape') return;
-    if (modalAjuda.isOpen()) modalAjuda.setOpen(false);
-    if (modalRisco.isOpen()) modalRisco.setOpen(false);
-    if (modalIMC.isOpen()) modalIMC.setOpen(false);
-    if (modalCV.isOpen()) modalCV.setOpen(false);
-    if (modalRange.isOpen()) modalRange.setOpen(false);
-    if (modalUSLE.isOpen()) modalUSLE.setOpen(false);
-  });
-
-  if (btnCalcular) btnCalcular.addEventListener('click', safeCalcular);
-  if (btnExportar) btnExportar.addEventListener('click', exportarPDF);
-  if (btnLimpar) btnLimpar.addEventListener('click', limpar);
-  if (btnBuscarClima) btnBuscarClima.addEventListener('click', buscarDadosClimaticos);
-
-  // Preview da imagem do croqui
-  const inputCroqui = document.getElementById('inputCroqui');
-  const previewCroqui = document.getElementById('previewCroqui');
-  
-  if (inputCroqui) {
-    inputCroqui.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          if (previewCroqui) {
-            previewCroqui.src = evt.target.result;
-            previewCroqui.style.display = 'block';
-          }
-          // Guarda base64 globalmente para usar no PDF
-          window.imagemCroquiBase64 = evt.target.result;
-        };
-        reader.readAsDataURL(file);
-      } else {
-        if (previewCroqui) {
-          previewCroqui.src = '';
-          previewCroqui.style.display = 'none';
-        }
-        window.imagemCroquiBase64 = null;
-      }
-    });
-  }
-
-  setupLeituras();
-  setupCampoCalibracao();
-
-  const setDateInput = (el, dateObj) => {
-    if (!el || !(dateObj instanceof Date) || Number.isNaN(dateObj.getTime())) return;
-    // Alguns navegadores não suportam valueAsDate; use fallback com YYYY-MM-DD.
-    try {
-      if ('valueAsDate' in el) {
-        el.valueAsDate = dateObj;
-        if (el.value) return;
-      }
-    } catch {
-      // ignore
-    }
-    const yyyyMmDd = dateObj.toISOString().slice(0, 10);
-    el.value = yyyyMmDd;
-  };
-
-  const dataEl = document.getElementById('data');
-  setDateInput(dataEl, new Date());
-
-  const climaFimEl = document.getElementById('climaFim');
-  setDateInput(climaFimEl, new Date());
-  const climaInicioEl = document.getElementById('climaInicio');
-  if (climaInicioEl) {
-    const d0 = new Date();
-    d0.setDate(d0.getDate() - 30);
-    setDateInput(climaInicioEl, d0);
-  }
-});
