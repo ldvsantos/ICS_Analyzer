@@ -320,6 +320,43 @@
     peso_espigas: { x: 'produtividade', intercept: -102.5840496920282, slope: 0.26059384298886884, r2: 0.9472933079831639 }
   };
 
+  function getReducedMLModels() {
+    if (typeof ISPC_ReducedMLModels !== 'undefined' && ISPC_ReducedMLModels) {
+      return ISPC_ReducedMLModels;
+    }
+    if (typeof window !== 'undefined' && window.ISPC_ReducedMLModels) {
+      return window.ISPC_ReducedMLModels;
+    }
+    if (typeof require === 'function') {
+      try {
+        // Node: mesmo diretório do fuzzy.js
+        // eslint-disable-next-line global-require, import/no-dynamic-require
+        return require('./ics_analyzer_ispc_reduced_ml_models.js');
+      } catch (err) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  function ridgePredict(reducedInputs, modelSpec) {
+    if (!modelSpec || !modelSpec.ok) return null;
+    const st = modelSpec.standardization;
+    const mean = st && st.mean ? st.mean : {};
+    const std = st && st.std ? st.std : {};
+
+    let y = modelSpec.intercept;
+    const weights = modelSpec.weights || {};
+    for (const k of Object.keys(weights)) {
+      const x = reducedInputs[k];
+      if (!Number.isFinite(x)) return null;
+      const m = Number.isFinite(mean[k]) ? mean[k] : 0;
+      const s = Number.isFinite(std[k]) && std[k] !== 0 ? std[k] : 1;
+      y += weights[k] * ((x - m) / s);
+    }
+    return Number.isFinite(y) ? y : null;
+  }
+
   function evaluateISPCReduced(reducedInputs, options) {
     const rawReduced = reducedInputs || {};
 
@@ -337,29 +374,53 @@
       };
     }
 
-    // Hoje suportamos explicitamente a calibração 0–10 cm (dados_010).
-    // O parâmetro options.depthTag fica para futura expansão.
     const depthTag = options && options.depthTag ? String(options.depthTag) : 'dados_010';
-    const models = (depthTag === 'dados_010') ? ISPC_REDUCED_MODELS_DADOS_010 : ISPC_REDUCED_MODELS_DADOS_010;
+
+    const ml = getReducedMLModels();
+    const mlTag = ml && ml.by_tag ? ml.by_tag[depthTag] : null;
+    const mlModels = mlTag && mlTag.models ? mlTag.models : null;
+
+    // Fallback: regressões lineares simples (legado)
+    const legacyModels = (depthTag === 'dados_010') ? ISPC_REDUCED_MODELS_DADOS_010 : ISPC_REDUCED_MODELS_DADOS_010;
 
     const fullInputs = { ...rawReduced };
     const estimatedRawInputs = [];
     const estimatedValues = {};
     const estimatedModels = {};
 
-    for (const targetKey of Object.keys(models)) {
-      const model = models[targetKey];
-      const xKey = model.x;
-      const xVal = rawReduced[xKey];
-      if (!Number.isFinite(xVal)) {
-        continue;
+    if (mlModels) {
+      for (const targetKey of Object.keys(mlModels)) {
+        const spec = mlModels[targetKey];
+        const yVal = ridgePredict(rawReduced, spec);
+        if (Number.isFinite(yVal)) {
+          // Guard-rails físicos básicos
+          const yClean = (targetKey === 'n_espigas_com' || targetKey === 'peso_espigas') ? Math.max(0, yVal) : yVal;
+          fullInputs[targetKey] = yClean;
+          estimatedRawInputs.push(targetKey);
+          estimatedValues[targetKey] = yClean;
+          estimatedModels[targetKey] = {
+            kind: 'ridge',
+            alpha: spec.alpha,
+            cv: spec.cv,
+            train: spec.train
+          };
+        }
       }
-      const yVal = model.intercept + model.slope * xVal;
-      if (Number.isFinite(yVal)) {
-        fullInputs[targetKey] = yVal;
-        estimatedRawInputs.push(targetKey);
-        estimatedValues[targetKey] = yVal;
-        estimatedModels[targetKey] = model;
+    } else {
+      for (const targetKey of Object.keys(legacyModels)) {
+        const model = legacyModels[targetKey];
+        const xKey = model.x;
+        const xVal = rawReduced[xKey];
+        if (!Number.isFinite(xVal)) {
+          continue;
+        }
+        const yVal = model.intercept + model.slope * xVal;
+        if (Number.isFinite(yVal)) {
+          fullInputs[targetKey] = yVal;
+          estimatedRawInputs.push(targetKey);
+          estimatedValues[targetKey] = yVal;
+          estimatedModels[targetKey] = model;
+        }
       }
     }
 
@@ -368,6 +429,8 @@
     return {
       ...base,
       mode: 'ispc_reduced',
+      depthTag,
+      estimationKind: mlModels ? 'ml_ridge' : 'legacy_linear',
       reducedRawInputs: rawReduced,
       rawInputs: fullInputs,
       estimatedRawInputs,

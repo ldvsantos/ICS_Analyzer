@@ -63,6 +63,8 @@ function analyzeTag(tag) {
     [0, 0, 0]
   ];
 
+  let estimationKindSeen = null;
+
   let nTotal = 0;
   let nUsed = 0;
   let nAgree = 0;
@@ -87,6 +89,9 @@ function analyzeTag(tag) {
     };
 
     const reduced = ICS_Fuzzy.evaluateISPCReduced(reducedInputs, { depthTag: tag });
+    if (!estimationKindSeen && reduced && reduced.estimationKind) {
+      estimationKindSeen = String(reduced.estimationKind);
+    }
 
     if (!Number.isFinite(full.score) || !Number.isFinite(reduced.score)) {
       continue;
@@ -126,7 +131,9 @@ function analyzeTag(tag) {
     notes: {
       reducedInputsCount: 10,
       estimatedInputs: ['dmp', 'rmp', 'densidade', 'n_espigas_com', 'peso_espigas'],
-      calibration: 'modelos lineares ajustados no banco (calibracao primaria: 0-10 cm)'
+      calibration: (estimationKindSeen === 'ml_ridge')
+        ? 'variaveis estimadas por ML (ridge) e inferencia fuzzy subsequente'
+        : 'variaveis estimadas por modelo linear (fallback) e inferencia fuzzy subsequente'
     }
   };
 }

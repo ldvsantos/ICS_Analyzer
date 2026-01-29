@@ -1,6 +1,6 @@
 {
   "name": "ics-analyzer-desktop",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "ICS Analyzer - Aplicativo desktop (Windows) empacotado com Electron",
   "main": "main.js",
   "author": "ICS Analyzer Team",
@@ -8,8 +8,8 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "pack": "electron-builder --config.directories.output=dist_release --dir",
+    "dist": "electron-builder --config.directories.output=dist_release"
   },
   "devDependencies": {
     "electron": "^30.0.0",
@@ -19,7 +19,7 @@
     "appId": "br.ufs.icsanalyzer",
     "productName": "ICS Analyzer",
     "directories": {
-      "output": "dist"
+      "output": "dist_release"
     },
     "files": [
       "main.js",
@@ -32,7 +32,10 @@
       }
     ],
     "win": {
-      "target": ["nsis", "zip"],
+      "target": [
+        "nsis",
+        "zip"
+      ],
       "icon": "build/icon.ico",
       "signAndEditExecutable": false
     },

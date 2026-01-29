@@ -264,7 +264,7 @@ function desenharAreaChartICS(doc, x, y, w, h, valores, theme) {
   doc.setTextColor(50);
 
   // Eixo Y: um pouco menor e mais próximo do eixo
-  const yAxisLabel = 'Cálculo de Índices de Cobertura do Solo ICS (%)';
+  const yAxisLabel = 'Índice de Cobertura do Solo ICS (%)';
   doc.setFontSize(7);
   // jsPDF: com rotação, o alinhamento pode ficar “estranho”; centraliza manualmente.
   // getTextWidth retorna largura em mm para o fontSize atual.

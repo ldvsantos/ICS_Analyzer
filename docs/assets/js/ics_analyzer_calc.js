@@ -74,7 +74,7 @@ function calcularIndicadoresAvancados(d) {
   if (kNorm !== null) parts.push(wK);
   const wSum = parts.reduce((a, b) => a + b, 0);
 
-  let riscoScore = null;
+  let riscoScoreHeuristico = null;
   if (wSum > 0) {
     const base = (
       (rNorm ?? 0) * wR +
@@ -82,7 +82,32 @@ function calcularIndicadoresAvancados(d) {
       (sNorm ?? 0) * wS +
       (kNorm ?? 0) * wK
     ) / wSum;
-    riscoScore = Math.round(100 * clamp01(base + rBoost));
+    riscoScoreHeuristico = Math.round(100 * clamp01(base + rBoost));
+  }
+
+  let riscoScore = riscoScoreHeuristico;
+  let riscoEstimativa = 'heuristico';
+  let riscoModeloAmostras = null;
+
+  const ml = (typeof window !== 'undefined') ? window.ICSML : null;
+  const canML = ml && typeof ml.getOrCreateRegressorModel === 'function';
+  const x = [
+    Number.isFinite(rNorm) ? rNorm : 0,
+    Number.isFinite(exposicao) ? exposicao : 0,
+    Number.isFinite(sNorm) ? sNorm : 0,
+    Number.isFinite(kNorm) ? kNorm : 0,
+    Number.isFinite(rBoost) ? rBoost : 0,
+  ];
+
+  if (canML && x.every(Number.isFinite) && Number.isFinite(riscoScoreHeuristico)) {
+    const model = ml.getOrCreateRegressorModel('erosao_risco_score', 5, { learningRate: 0.05, l2: 0.001 });
+    riscoModeloAmostras = model ? model.nSeen() : null;
+
+    if (model) {
+      model.partialFit(x, riscoScoreHeuristico);
+      model.save();
+      riscoModeloAmostras = model.nSeen();
+    }
   }
 
   const cvNorm = cv === null ? null : clamp01(cv / 100);
@@ -134,6 +159,8 @@ function calcularIndicadoresAvancados(d) {
   return {
     exposicao,
     riscoScore,
+    riscoEstimativa,
+    riscoModeloAmostras,
     riscoClasse: riscoClass.classe,
     riscoDesc: riscoClass.desc,
     imcScore,
@@ -440,6 +467,8 @@ function calcular() {
     usleP,
     exposicao: avanPreview.exposicao,
     riscoErosaoScore: avanPreview.riscoScore,
+    riscoErosaoEstimativa: avanPreview.riscoEstimativa,
+    riscoErosaoModeloAmostras: avanPreview.riscoModeloAmostras,
     riscoErosaoClasse: avanPreview.riscoClasse,
     riscoErosaoDesc: avanPreview.riscoDesc,
     imcScore: avanPreview.imcScore,

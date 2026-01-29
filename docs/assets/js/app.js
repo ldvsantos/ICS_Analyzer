@@ -120,9 +120,162 @@ function calcularIQS(dados) {
     return null;
   }
 
+  function getBank() {
+    if (typeof window === 'undefined') return null;
+    if (window.ICSBank) return window.ICSBank;
+    return null;
+  }
+
+  function downloadTextFile(filename, text, mime) {
+    const name = String(filename || 'download.txt');
+    const content = String(text ?? '');
+    const type = mime || 'text/plain;charset=utf-8';
+
+    try {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 250);
+    } catch (err) {
+      console.error('Falha ao baixar arquivo:', err);
+    }
+  }
+
   function safeText(el, text) {
     if (!el) return;
     el.textContent = String(text);
+  }
+
+  function parseCSVText(txt) {
+    const raw = String(txt ?? '').trim();
+    if (!raw) return { header: [], rows: [] };
+
+    const lines = raw.split(/\r?\n/).filter((l) => String(l).trim().length);
+    if (!lines.length) return { header: [], rows: [] };
+
+    const header = lines[0].split(',').map((h) => h.trim());
+    const rows = [];
+
+    for (let i = 1; i < lines.length; i += 1) {
+      const parts = lines[i].split(',');
+      const row = {};
+      for (let j = 0; j < header.length; j += 1) {
+        const key = header[j];
+        const cell = (parts[j] ?? '').trim();
+        row[key] = cell;
+      }
+      rows.push(row);
+    }
+
+    return { header, rows };
+  }
+
+  function normalizeCropForISPCRecords(crop) {
+    const c = String(crop || '').trim();
+    if (!c) return '';
+    if (c === 'Pearl Millet') return 'Millet';
+    if (c === 'Sunn Hemp') return 'Sunn hemp';
+    return c;
+  }
+
+  function fitLinearRegression(xs, ys) {
+    const n = xs.length;
+    if (!n) return null;
+    const mean = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+    const mx = mean(xs);
+    const my = mean(ys);
+    let sxx = 0;
+    let sxy = 0;
+    for (let i = 0; i < n; i += 1) {
+      const dx = xs[i] - mx;
+      sxx += dx * dx;
+      sxy += dx * (ys[i] - my);
+    }
+    if (sxx === 0) return { intercept: my, slope: 0 };
+    const slope = sxy / sxx;
+    const intercept = my - slope * mx;
+    return { intercept, slope };
+  }
+
+  function computeISPCScoreFromRow(row, depthTag, fuzzy) {
+    if (!fuzzy || typeof fuzzy.evaluateISPCReduced !== 'function') return null;
+    const toNum = (v) => {
+      const x = Number(v);
+      return Number.isFinite(x) ? x : null;
+    };
+
+    const pickObserved = () => {
+      const keys = ['ispc_real', 'ispc', 'ispc_score', 'ispcScore'];
+      for (const k of keys) {
+        if (Object.prototype.hasOwnProperty.call(row, k)) {
+          const vv = parseNumberPtBR(row[k]);
+          if (Number.isFinite(vv)) return vv;
+        }
+      }
+      return null;
+    };
+
+    const reducedInputs = {
+      dmg: toNum(row.dmg),
+      estoque_c: toNum(row.estoque_c),
+      na: toNum(row.na),
+      icv: toNum(row.icv),
+      altura: toNum(row.altura),
+      diam_espiga: toNum(row.diam_espiga),
+      comp_espiga: toNum(row.comp_espiga),
+      n_plantas: toNum(row.n_plantas),
+      n_espigas: toNum(row.n_espigas),
+      produtividade: toNum(row.produtividade)
+    };
+
+    const x = [
+      reducedInputs.dmg,
+      reducedInputs.estoque_c,
+      reducedInputs.na,
+      reducedInputs.icv,
+      reducedInputs.altura,
+      reducedInputs.diam_espiga,
+      reducedInputs.comp_espiga,
+      reducedInputs.n_plantas,
+      reducedInputs.n_espigas,
+      reducedInputs.produtividade,
+    ];
+
+    const out = fuzzy.evaluateISPCReduced(reducedInputs, { depthTag });
+    const scoreTeacher = Number.isFinite(out.score) ? out.score : null;
+    const scoreObserved = pickObserved();
+
+    const ml = (typeof window !== 'undefined') ? window.ICSML : null;
+    const canML = ml && typeof ml.getOrCreateRegressorModel === 'function';
+    const canX = x.every(Number.isFinite);
+
+    let scoreFinal = scoreTeacher;
+    if (canML && canX) {
+      const modelKey = `ispc_reduced_index_${String(depthTag || 'dados_010')}`;
+      const model = ml.getOrCreateRegressorModel(modelKey, 10, { learningRate: 0.03, l2: 0.0005 });
+
+      if (model && model.nSeen() >= 50) {
+        const pred = model.predict(x);
+        if (Number.isFinite(pred)) {
+          scoreFinal = Math.max(0, Math.min(10, pred));
+        }
+      }
+
+      const yTrain = Number.isFinite(scoreObserved)
+        ? Math.max(0, Math.min(10, scoreObserved))
+        : scoreTeacher;
+      if (model && Number.isFinite(yTrain) && Number.isFinite(scoreTeacher)) {
+        model.partialFit(x, yTrain);
+        model.save();
+      }
+    }
+
+    return Number.isFinite(scoreFinal) ? scoreFinal : null;
   }
 
   function buildChartData(tillage, crop, years) {
@@ -171,6 +324,244 @@ function calcularIQS(dados) {
     const fuzzyResultEl = document.getElementById('fuzzy-result');
     const fuzzyExplainEl = document.getElementById('fuzzy-explain');
     const fuzzyRecListEl = document.getElementById('fuzzy-recommendations');
+
+    const ispcDepthEl = document.getElementById('ispcR-depth');
+    const ispcHistoryFileEl = document.getElementById('ispc-history-file');
+    const ispcForecastCardEl = document.getElementById('ispc-forecast-card');
+    const ispcForecastResultEl = document.getElementById('ispc-forecast-result');
+    const ispcForecastExplainEl = document.getElementById('ispc-forecast-explain');
+
+    const ispcBankImportEl = document.getElementById('ispc-bank-import');
+    const ispcBankExportBtn = document.getElementById('ispc-bank-export');
+    const ispcBankResetBtn = document.getElementById('ispc-bank-reset');
+    const ispcBankStatusEl = document.getElementById('ispc-bank-status');
+
+    let ispcHistory = null;
+    let ispcHistoryFromBank = null;
+
+    const bank = getBank();
+
+    const setBankStatus = (txt) => {
+      if (!ispcBankStatusEl) return;
+      ispcBankStatusEl.textContent = String(txt || '');
+    };
+
+    const refreshBankStatus = async () => {
+      if (!bank || !ispcBankStatusEl) return;
+      try {
+        const n = await bank.countISPCRecords();
+        setBankStatus(`Banco ISPC local: ${n} registros.`);
+      } catch (err) {
+        setBankStatus('Banco ISPC: indisponível neste navegador.');
+      }
+    };
+
+    const refreshIspcHistoryFromBank = async () => {
+      if (!bank) {
+        ispcHistoryFromBank = null;
+        return;
+      }
+      try {
+        const rows = await bank.getAllISPCRecords();
+        ispcHistoryFromBank = { header: [], rows: rows || [] };
+      } catch {
+        ispcHistoryFromBank = null;
+      }
+    };
+
+    const depthTagToCM = (depthTag) => (String(depthTag) === 'dados_1020' ? '10-20' : '0-10');
+
+    const trainOnlineISPCFromBank = async (depthTag, fuzzy) => {
+      if (!bank || !window.ICSML || typeof window.ICSML.getOrCreateRegressorModel !== 'function') return;
+      if (!fuzzy || typeof fuzzy.evaluateISPC !== 'function' || typeof fuzzy.evaluateISPCReduced !== 'function') return;
+
+      const depthCM = depthTagToCM(depthTag);
+      let records = [];
+      try {
+        records = await bank.getAllISPCRecords();
+      } catch {
+        return;
+      }
+      const rows = (records || []).filter((r) => String(r.profundidade_cm || '').trim() === depthCM);
+      if (!rows.length) return;
+
+      const modelKey = `ispc_reduced_index_${String(depthTag || 'dados_010')}`;
+      const model = window.ICSML.getOrCreateRegressorModel(modelKey, 10, { learningRate: 0.03, l2: 0.0005 });
+      if (!model) return;
+
+      let i = 0;
+      const batch = 250;
+      setBankStatus(`Banco ISPC: treinando em background (${rows.length} registros)...`);
+
+      await new Promise((resolve) => {
+        const step = () => {
+          const end = Math.min(rows.length, i + batch);
+          for (; i < end; i += 1) {
+            const r = rows[i];
+            const x = [
+              r.dmg,
+              r.estoque_c,
+              r.na,
+              r.icv,
+              r.altura,
+              r.diam_espiga,
+              r.comp_espiga,
+              r.n_plantas,
+              r.n_espigas,
+              r.produtividade,
+            ];
+            if (!x.every(Number.isFinite)) continue;
+
+            let y = null;
+            const full = {
+              dmg: r.dmg,
+              dmp: r.dmp,
+              rmp: r.rmp,
+              densidade: r.densidade,
+              estoque_c: r.estoque_c,
+              na: r.na,
+              icv: r.icv,
+              altura: r.altura,
+              diam_espiga: r.diam_espiga,
+              comp_espiga: r.comp_espiga,
+              n_plantas: r.n_plantas,
+              n_espigas: r.n_espigas,
+              n_espigas_com: r.n_espigas_com,
+              peso_espigas: r.peso_espigas,
+              produtividade: r.produtividade,
+            };
+
+            if (Object.values(full).every(Number.isFinite)) {
+              const out = fuzzy.evaluateISPC(full);
+              if (out && Number.isFinite(out.score)) y = out.score;
+            }
+
+            if (!Number.isFinite(y)) {
+              const reduced = {
+                dmg: r.dmg,
+                estoque_c: r.estoque_c,
+                na: r.na,
+                icv: r.icv,
+                altura: r.altura,
+                diam_espiga: r.diam_espiga,
+                comp_espiga: r.comp_espiga,
+                n_plantas: r.n_plantas,
+                n_espigas: r.n_espigas,
+                produtividade: r.produtividade,
+              };
+              const out2 = fuzzy.evaluateISPCReduced(reduced, { depthTag });
+              if (out2 && Number.isFinite(out2.score)) y = out2.score;
+            }
+
+            if (!Number.isFinite(y)) continue;
+            model.partialFit(x, Math.max(0, Math.min(10, y)));
+          }
+
+          model.save();
+
+          if (i < rows.length) {
+            setBankStatus(`Banco ISPC: treinando em background (${i}/${rows.length})...`);
+            setTimeout(step, 0);
+          } else {
+            resolve();
+          }
+        };
+        step();
+      });
+
+      await refreshBankStatus();
+    };
+
+    refreshBankStatus();
+    refreshIspcHistoryFromBank();
+
+    if (bank) {
+      setTimeout(async () => {
+        try {
+          const n = await bank.countISPCRecords();
+          if (!n) return;
+          const depthTag = ispcDepthEl ? String(ispcDepthEl.value || 'dados_010') : 'dados_010';
+          const fuzzy = (typeof window !== 'undefined') ? window.ICS_Fuzzy : null;
+          await trainOnlineISPCFromBank(depthTag, fuzzy);
+        } catch {
+          /* ignore */
+        }
+      }, 300);
+    }
+
+    if (ispcBankImportEl && bank) {
+      ispcBankImportEl.addEventListener('change', async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        try {
+          const txt = await file.text();
+          const res = await bank.importISPCRecordsCSVText(txt);
+          if (!res || !res.ok) {
+            setBankStatus(res && res.error ? res.error : 'Falha ao importar banco ISPC.');
+            return;
+          }
+          await refreshBankStatus();
+          await refreshIspcHistoryFromBank();
+          const depthTag = ispcDepthEl ? String(ispcDepthEl.value || 'dados_010') : 'dados_010';
+          const fuzzy = (typeof window !== 'undefined') ? window.ICS_Fuzzy : null;
+          await trainOnlineISPCFromBank(depthTag, fuzzy);
+        } catch (err) {
+          console.error('Falha ao importar banco ISPC:', err);
+          setBankStatus('Falha ao importar banco ISPC.');
+        } finally {
+          try { e.target.value = ''; } catch { /* ignore */ }
+        }
+      });
+    }
+
+    if (ispcBankExportBtn && bank) {
+      ispcBankExportBtn.addEventListener('click', async () => {
+        try {
+          const csv = await bank.exportISPCRecordsCSV();
+          const dt = new Date();
+          const y = dt.getFullYear();
+          const m = String(dt.getMonth() + 1).padStart(2, '0');
+          const d = String(dt.getDate()).padStart(2, '0');
+          downloadTextFile(`ispc_bank_${y}${m}${d}.csv`, csv, 'text/csv;charset=utf-8');
+        } catch (err) {
+          console.error('Falha ao exportar banco ISPC:', err);
+          setBankStatus('Falha ao exportar banco ISPC.');
+        }
+      });
+    }
+
+    if (ispcBankResetBtn && bank) {
+      ispcBankResetBtn.addEventListener('click', async () => {
+        if (!confirm('Deseja limpar o banco ISPC local deste navegador?')) return;
+        try {
+          await bank.clearISPCRecords();
+          await refreshBankStatus();
+          await refreshIspcHistoryFromBank();
+        } catch (err) {
+          console.error('Falha ao limpar banco ISPC:', err);
+          setBankStatus('Falha ao limpar banco ISPC.');
+        }
+      });
+    }
+
+    if (ispcHistoryFileEl) {
+      ispcHistoryFileEl.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) {
+          ispcHistory = null;
+          if (ispcForecastCardEl) ispcForecastCardEl.classList.add('lt-hidden');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const txt = String(evt.target.result || '');
+          ispcHistory = parseCSVText(txt);
+          if (ispcForecastCardEl) ispcForecastCardEl.classList.add('lt-hidden');
+        };
+        reader.readAsText(file);
+      });
+    }
 
     if (enableFuzzyEl && fuzzyFieldsEl) {
       const sync = () => {
@@ -301,10 +692,73 @@ function calcularIQS(dados) {
 
             const anyField = Object.values(reducedInputs).some((v) => v !== null);
             if (enabled || anyField) {
-              fuzzyISPCReducedPayload = fuzzy.evaluateISPCReduced(reducedInputs, { depthTag: 'dados_010' });
+              const depthTag = ispcDepthEl ? String(ispcDepthEl.value || 'dados_010') : 'dados_010';
+              fuzzyISPCReducedPayload = fuzzy.evaluateISPCReduced(reducedInputs, { depthTag });
+
+              if (bank && fuzzyISPCReducedPayload && fuzzyISPCReducedPayload.rawInputs) {
+                const cropNorm = normalizeCropForISPCRecords(document.getElementById('previous-crop')?.value);
+                const tillageSys = String(document.getElementById('tillage-system')?.value || '').toUpperCase();
+                const ano = new Date().getFullYear();
+                const profundidade_cm = depthTagToCM(depthTag);
+
+                const raw15 = fuzzyISPCReducedPayload.rawInputs;
+                bank.addISPCRecord({
+                  ano,
+                  profundidade_cm,
+                  parcela: tillageSys,
+                  cultura: cropNorm,
+                  dmg: raw15.dmg,
+                  dmp: raw15.dmp,
+                  rmp: raw15.rmp,
+                  densidade: raw15.densidade,
+                  estoque_c: raw15.estoque_c,
+                  na: raw15.na,
+                  icv: raw15.icv,
+                  altura: raw15.altura,
+                  diam_espiga: raw15.diam_espiga,
+                  comp_espiga: raw15.comp_espiga,
+                  n_plantas: raw15.n_plantas,
+                  n_espigas: raw15.n_espigas,
+                  n_espigas_com: raw15.n_espigas_com,
+                  peso_espigas: raw15.peso_espigas,
+                  produtividade: raw15.produtividade,
+                }).then(() => {
+                  refreshBankStatus();
+                  refreshIspcHistoryFromBank();
+                }).catch(() => { /* ignore */ });
+              }
+
+              // Aprendizado automático em background usando apenas os 10 campos já existentes.
+              // O score fuzzy atua como professor, permitindo aquecimento do modelo online sem histórico.
+              if (typeof window !== 'undefined' && window.ICSML && typeof window.ICSML.getOrCreateRegressorModel === 'function') {
+                const x = [
+                  reducedInputs.dmg,
+                  reducedInputs.estoque_c,
+                  reducedInputs.na,
+                  reducedInputs.icv,
+                  reducedInputs.altura,
+                  reducedInputs.diam_espiga,
+                  reducedInputs.comp_espiga,
+                  reducedInputs.n_plantas,
+                  reducedInputs.n_espigas,
+                  reducedInputs.produtividade,
+                ];
+                if (x.every(Number.isFinite) && fuzzyISPCReducedPayload && Number.isFinite(fuzzyISPCReducedPayload.score)) {
+                  const modelKey = `ispc_reduced_index_${String(depthTag || 'dados_010')}`;
+                  const model = window.ICSML.getOrCreateRegressorModel(modelKey, 10, { learningRate: 0.03, l2: 0.0005 });
+                  if (model) {
+                    model.partialFit(x, Math.max(0, Math.min(10, fuzzyISPCReducedPayload.score)));
+                    model.save();
+                  }
+                }
+              }
 
               if (fuzzyTitleEl) fuzzyTitleEl.textContent = 'ISPC (fuzzy)';
-              if (fuzzyHintEl) fuzzyHintEl.textContent = 'Índice ISPC (0–10) com 10 variáveis informadas e 5 estimadas por modelos (calibração 0–10 cm).';
+              if (fuzzyHintEl) {
+                const kind = fuzzyISPCReducedPayload.estimationKind === 'ml_ridge' ? 'modelo ML' : 'modelo linear';
+                const depthTxt = (depthTag === 'dados_1020') ? '10–20 cm' : '0–10 cm';
+                fuzzyHintEl.textContent = `Índice ISPC (0–10) com 10 variáveis informadas e 5 estimadas por ${kind} (profundidade ${depthTxt}).`;
+              }
 
               if (fuzzyCardEl) fuzzyCardEl.classList.remove('lt-hidden');
 
@@ -342,6 +796,109 @@ function calcularIQS(dados) {
                     : 'Algumas variáveis podem ser estimadas no modo reduzido.';
                   li.textContent = `Modelo ISPC: use o PDF para registrar entradas, estimativas e score. ${est}`;
                   fuzzyRecListEl.appendChild(li);
+                }
+              }
+
+              // Projeção de 10 anos a partir do histórico carregado (quando houver coluna ano)
+              const historySource = (ispcHistory && ispcHistory.rows && ispcHistory.rows.length)
+                ? ispcHistory
+                : (ispcHistoryFromBank && ispcHistoryFromBank.rows && ispcHistoryFromBank.rows.length ? ispcHistoryFromBank : null);
+
+              if (ispcForecastCardEl && historySource && historySource.rows && historySource.rows.length && typeof Chart !== 'undefined') {
+                const cropNorm = normalizeCropForISPCRecords(document.getElementById('previous-crop')?.value);
+                const tillageSys = String(document.getElementById('tillage-system')?.value || '').toUpperCase();
+                const depthTag = ispcDepthEl ? String(ispcDepthEl.value || 'dados_010') : 'dados_010';
+                const depthFilter = (depthTag === 'dados_1020') ? '10-20' : '0-10';
+
+                const rows = historySource.rows
+                  .map((r) => ({
+                    ...r,
+                    ano: Number.parseInt(r.ano, 10),
+                    profundidade_cm: String(r.profundidade_cm || '').trim(),
+                    parcela: String(r.parcela || '').trim().toUpperCase(),
+                    cultura: String(r.cultura || '').trim()
+                  }))
+                  .filter((r) => Number.isFinite(r.ano) && r.parcela === tillageSys && (!cropNorm || r.cultura === cropNorm) && r.profundidade_cm === depthFilter);
+
+                // Agregar por ano com score via ML
+                const byYear = {};
+                for (const r of rows) {
+                  const score = computeISPCScoreFromRow(r, depthTag, fuzzy);
+                  if (!Number.isFinite(score)) continue;
+                  byYear[r.ano] = byYear[r.ano] || [];
+                  byYear[r.ano].push(score);
+                }
+
+                const years = Object.keys(byYear).map((k) => Number.parseInt(k, 10)).filter(Number.isFinite).sort((a, b) => a - b);
+                const hist = years.map((y) => byYear[y].reduce((a, b) => a + b, 0) / byYear[y].length);
+
+                if (years.length >= 3) {
+                  const lr = fitLinearRegression(years, hist);
+                  const lastYear = years[years.length - 1];
+
+                  const fYears = [];
+                  const fVals = [];
+                  for (let i = 1; i <= 10; i += 1) {
+                    const yy = lastYear + i;
+                    fYears.push(yy);
+                    const pred = lr.intercept + lr.slope * yy;
+                    fVals.push(Math.max(0, Math.min(10, pred)));
+                  }
+
+                  const chartStore = window.ICSCharts || (window.ICSCharts = {});
+                  if (chartStore.ispcForecastChart) chartStore.ispcForecastChart.destroy();
+
+                  const ctxEl = document.getElementById('ispc-forecast-chart');
+                  if (ctxEl) {
+                    chartStore.ispcForecastChart = new Chart(ctxEl, {
+                      type: 'line',
+                      data: {
+                        labels: years.concat(fYears),
+                        datasets: [
+                          {
+                            label: 'ISPC observado (histórico)',
+                            data: hist.concat(Array(fYears.length).fill(null)),
+                            borderColor: '#1565c0',
+                            backgroundColor: 'rgba(21, 101, 192, 0.1)',
+                            tension: 0.25
+                          },
+                          {
+                            label: 'ISPC projetado (10 anos)',
+                            data: Array(hist.length).fill(null).concat(fVals),
+                            borderColor: '#2e7d32',
+                            backgroundColor: 'rgba(46, 125, 50, 0.1)',
+                            borderDash: [6, 4],
+                            tension: 0.25
+                          }
+                        ]
+                      },
+                      options: {
+                        responsive: true,
+                        plugins: {
+                          title: {
+                            display: true,
+                            text: 'Projeção do ISPC sob manutenção do manejo'
+                          }
+                        },
+                        scales: {
+                          y: { min: 0, max: 10 }
+                        }
+                      }
+                    });
+                  }
+
+                  const lastPred = fVals[fVals.length - 1];
+                  if (ispcForecastResultEl) ispcForecastResultEl.textContent = `ISPC projetado em ${fYears[fYears.length - 1]}: ${formatNumberPtBR(lastPred)}/10`;
+                  if (ispcForecastExplainEl) {
+                    const slopeTxt = Number.isFinite(lr.slope) ? formatNumberPtBR(lr.slope) : '';
+                    const src = (historySource === ispcHistoryFromBank) ? 'banco local' : 'CSV';
+                    ispcForecastExplainEl.textContent = `Tendência linear estimada no histórico filtrado, com variação anual aproximada de ${slopeTxt} pontos por ano (limitada a 0–10), usando ${src} como fonte.`;
+                  }
+                  ispcForecastCardEl.classList.remove('lt-hidden');
+                } else {
+                  if (ispcForecastResultEl) ispcForecastResultEl.textContent = 'Indeterminado';
+                  if (ispcForecastExplainEl) ispcForecastExplainEl.textContent = 'Histórico insuficiente após o filtro. Envie um CSV ou alimente o banco local com pelo menos 3 anos válidos para parcela, cultura e profundidade selecionadas.';
+                  ispcForecastCardEl.classList.remove('lt-hidden');
                 }
               }
             } else if (fuzzyCardEl) {

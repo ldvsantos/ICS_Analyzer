@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -15,6 +15,9 @@
   <script src="assets/js/ics_analyzer_sq_calc.js" defer></script>
   <script src="assets/js/ics_analyzer_charts.js" defer></script>
   <script src="assets/js/ics_analyzer_pdf_lt.js?v=2026-01-28-1" defer></script>
+  <script src="assets/js/ics_analyzer_ispc_reduced_ml_models.js?v=2026-01-29-1" defer></script>
+  <script src="assets/js/ics_analyzer_ml.js?v=2026-01-29-1" defer></script>
+  <script src="assets/js/ics_analyzer_bank.js?v=2026-01-29-1" defer></script>
   <script src="assets/js/ics_analyzer_fuzzy.js" defer></script>
   <script src="assets/js/app.js" defer></script>
 </head>
@@ -132,6 +135,38 @@
           </div>
 
           <div id="fuzzy-fields-ispc-reduced" class="lt-hidden">
+            <div class="grid lt-grid-spacer" style="margin-bottom: 10px;">
+              <div class="form-group">
+                <label for="ispcR-depth">Profundidade (cm):</label>
+                <select id="ispcR-depth">
+                  <option value="dados_010" selected>0–10</option>
+                  <option value="dados_1020">10–20</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="ispc-history-file">Histórico opcional (CSV com coluna ano) para projeção 10 anos:</label>
+                <input type="file" id="ispc-history-file" accept=".csv,text/csv">
+              </div>
+            </div>
+
+            <div class="grid lt-grid-spacer" style="margin-bottom: 10px;">
+              <div class="form-group">
+                <label for="ispc-bank-import">Banco ISPC (template) para alimentar e treinar em background:</label>
+                <input type="file" id="ispc-bank-import" accept=".csv,text/csv">
+                <p class="lt-muted-2">O banco é persistido localmente no navegador (IndexedDB). Use exportação como backup e para consolidar dados recebidos de outras fontes.</p>
+              </div>
+              <div class="form-group">
+                <label>Template e ações do banco:</label>
+                <div style="display:flex; gap:8px; flex-wrap: wrap;">
+                  <a class="btn btn-secondary" id="ispc-bank-template" href="assets/data/template_ispc_records.csv" download>Baixar template</a>
+                  <button type="button" class="btn btn-secondary" id="ispc-bank-export">Exportar banco (CSV)</button>
+                  <button type="button" class="btn btn-secondary" id="ispc-bank-reset">Limpar banco local</button>
+                </div>
+                <div class="lt-muted-2" id="ispc-bank-status">Banco ISPC: aguardando.</div>
+              </div>
+            </div>
+
             <div class="grid lt-grid-spacer">
               <div class="form-group">
                 <label for="ispcR-dmg">DMG:</label>
@@ -174,7 +209,7 @@
                 <input type="text" id="ispcR-produtividade" placeholder="Exemplo 8000">
               </div>
             </div>
-            <p class="lt-muted-2">No ISPC, o sistema estima automaticamente: <strong>DMP</strong>, <strong>RMP</strong>, <strong>Densidade</strong>, <strong>N de espigas comerciais/ha</strong> e <strong>Peso de espigas comerciais/ha</strong> (calibração 0–10 cm).</p>
+            <p class="lt-muted-2">No ISPC, o sistema estima automaticamente <strong>DMP</strong>, <strong>RMP</strong>, <strong>Densidade</strong>, <strong>N de espigas comerciais/ha</strong> e <strong>Peso de espigas comerciais/ha</strong> a partir das 10 variáveis medidas (modelo ML) e então calcula o índice fuzzy (0–10).</p>
           </div>
         </div>
       </div>
@@ -204,6 +239,18 @@
         <div class="lt-spacer-10">
           <div class="section-title lt-section-title-sm">Recomendações por gatilho</div>
           <ul id="fuzzy-recommendations" class="lt-list"></ul>
+        </div>
+      </div>
+
+      <div class="card lt-card-space lt-hidden" id="ispc-forecast-card">
+        <div class="section-title">Projeção ISPC (10 anos)</div>
+        <div class="result-hint lt-hint" id="ispc-forecast-hint">Projeção baseada na tendência anual do ISPC sob o sistema de preparo selecionado, estimada a partir do histórico carregado ou do banco local.</div>
+        <div class="lt-spacer-10">
+          <div class="lt-fuzzy-score" id="ispc-forecast-result">Indeterminado</div>
+          <div class="lt-fuzzy-explain" id="ispc-forecast-explain"></div>
+        </div>
+        <div class="chart-container" style="margin-top: 10px;">
+          <canvas id="ispc-forecast-chart"></canvas>
         </div>
       </div>
       <div class="chart-row">
