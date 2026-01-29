@@ -13,6 +13,18 @@ if ($dirty) {
   Write-Error "Repositorio com modificacoes pendentes. Commit/stage antes de liberar.\n$dirty"
 }
 
+$currentVersion = node -p "require('./desktop/package.json').version"
+try {
+  $cur = [Version]$currentVersion
+  $req = [Version]$Version
+} catch {
+  Write-Error "Versao invalida. Atual='$currentVersion' Solicitada='$Version'. Use formato X.Y.Z"
+}
+
+if ($req -le $cur) {
+  Write-Error "Versao solicitada ($Version) deve ser maior que a atual ($currentVersion)."
+}
+
 Write-Host "Atualizando versao do desktop para $Version"
 
 npm --prefix desktop version $Version --no-git-tag-version
@@ -26,7 +38,7 @@ git add desktop/package.json desktop/package-lock.json
 
 git commit -m "chore(desktop): bump versao para $Version"
 
-git tag "v$Version"
+git tag -a "v$Version" -m "Release $Version"
 
 git push
 
