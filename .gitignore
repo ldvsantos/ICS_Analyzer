@@ -1,6 +1,7 @@
 # Desktop build artifacts
 /desktop/node_modules/
 /desktop/dist/
+/desktop/dist_build_tmp/
 
 # Electron caches
 /desktop/.cache/
