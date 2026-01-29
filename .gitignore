@@ -2,6 +2,10 @@
 /desktop/node_modules/
 /desktop/dist/
 /desktop/dist_build_tmp/
+/desktop/dist_release/
+
+# Artefatos temporários de geração de modelos
+/docs/assets/js/ispc_reduced_ml_models.js
 
 # Electron caches
 /desktop/.cache/
