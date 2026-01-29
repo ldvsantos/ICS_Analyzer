@@ -11,16 +11,50 @@
 
 /* Banner Hero Moderno com Imagem de Fundo */
 .hero-banner {
-  /* Substitua a URL abaixo pela sua imagem de fundo favorita */
-  background: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.7)), url('https://images.unsplash.com/photo-1625246333195-58197bd47d26?q=80&w=1920&auto=format&fit=crop');
+  /* Imagem do banner (local) + overlay para legibilidade */
+  background:
+    linear-gradient(rgba(15, 23, 42, 0.78), rgba(15, 23, 42, 0.68)),
+    url('../img/waqar-mujahid-NU_s4KI_zME-unsplash.jpg');
   background-size: cover;
   background-position: center;
-  background-attachment: fixed; /* Efeito Parallax simples */
+  background-attachment: scroll;
   color: white;
-  padding: 8rem 1rem 12rem 1rem;
+  padding: 7.5rem 1rem 11rem 1rem;
   text-align: center;
   position: relative;
   overflow: hidden;
+}
+
+/* Caixa discreta para o conteúdo do banner (título + botões) */
+.hero-banner .hero-text {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 2.25rem 2.25rem;
+  border-radius: 18px;
+  border: 1px solid rgba(226, 232, 240, 0.12);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-banner .hero-text::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(15, 23, 42, 0.60), rgba(15, 23, 42, 0.60));
+  z-index: -1;
+}
+
+.hero-banner .hero-text .btn-hero {
+  margin: 0.45rem 0.4rem;
+}
+
+@media (min-width: 1024px) {
+  .hero-banner {
+    background-attachment: fixed;
+  }
 }
 
 .hero-text h2 {
@@ -67,24 +101,7 @@
   margin-bottom: 5rem;
   position: relative;
   z-index: 10;
-  padding-top: 3.5rem;
-  padding-bottom: 4rem;
 }
-
-.func-section::before {
-  content: '';
-  position: absolute;
-  top: 6rem;
-  bottom: 0;
-  left: 50%;
-  width: 100vw;
-  transform: translateX(-50%);
-  background:
-    linear-gradient(rgba(15, 23, 42, 0.60), rgba(15, 23, 42, 0.60)),
-    url('../img/this-life-s-illusions-a2485IwiW9s-unsplash.jpg');
-  background-size: cover;
-  background-position: center;
-  z-index: -1;
 
 .func-header {
   background: transparent;
