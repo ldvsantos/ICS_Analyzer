@@ -67,7 +67,24 @@
   margin-bottom: 5rem;
   position: relative;
   z-index: 10;
+  padding-top: 3.5rem;
+  padding-bottom: 4rem;
 }
+
+.func-section::before {
+  content: '';
+  position: absolute;
+  top: 6rem;
+  bottom: 0;
+  left: 50%;
+  width: 100vw;
+  transform: translateX(-50%);
+  background:
+    linear-gradient(rgba(15, 23, 42, 0.60), rgba(15, 23, 42, 0.60)),
+    url('../img/this-life-s-illusions-a2485IwiW9s-unsplash.jpg');
+  background-size: cover;
+  background-position: center;
+  z-index: -1;
 
 .func-header {
   background: transparent;
