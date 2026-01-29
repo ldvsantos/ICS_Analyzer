@@ -520,17 +520,20 @@
 
 .lattes-link {
   display: inline-block;
+  margin-top: auto;
+  padding: 0.5rem 1rem;
   font-size: 0.85rem;
   color: var(--accent);
-  font-weight: 500;
-  text-decoration: none;
-  border-bottom: 1px dotted var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 50px;
   transition: all 0.2s;
+  text-decoration: none;
+  font-weight: 600;
 }
 
 .lattes-link:hover {
-  color: var(--accent-hover);
-  border-bottom-style: solid;
+  background-color: var(--accent);
+  color: white;
 }
 
 /* Social Media Section */
@@ -578,35 +581,6 @@
 .social-icon {
   width: 24px;
   height: 24px;
-  fill: currentColor;
-}
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  font-weight: 500;
-  margin-bottom: 0.25rem;
-  overflow-wrap: anywhere;
-}
-
-.team-card .role-detail {
-  color: var(--accent);
-  font-size: 0.85rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-}
-
-.lattes-link {
-  margin-top: auto;
-  padding: 0.5rem 1rem;
-  font-size: 0.85rem;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: 50px;
-  transition: all 0.2s;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.lattes-link:hover {
-  background-color: var(--accent);
-  color: white;
+  fill: none;
+  stroke: currentColor;
 }
