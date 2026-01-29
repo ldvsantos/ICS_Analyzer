@@ -1,0 +1,90 @@
+name: Desktop Windows Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag para release (ex: v1.0.4). Vazio para apenas buildar artefatos.'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    env:
+      DESKTOP_DIR: desktop
+      OUT_DIR: desktop/dist_release
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Ler versao do desktop
+        id: desktop_version
+        shell: pwsh
+        run: |
+          $version = node -p "require('./desktop/package.json').version"
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Validar tag vs versao
+        if: startsWith(env.RELEASE_TAG, 'v')
+        shell: pwsh
+        run: |
+          $expected = "v${{ steps.desktop_version.outputs.version }}"
+          if ($env:RELEASE_TAG -ne $expected) {
+            Write-Error "Tag '$env:RELEASE_TAG' nao confere com a versao do desktop '$expected'. Ajuste desktop/package.json ou crie a tag correta."
+          }
+
+      - name: Instalar dependencias
+        working-directory: ${{ env.DESKTOP_DIR }}
+        run: npm ci
+
+      - name: Build desktop
+        working-directory: ${{ env.DESKTOP_DIR }}
+        run: npm run dist
+
+      - name: Listar artefatos
+        shell: pwsh
+        run: |
+          if (!(Test-Path "${{ env.OUT_DIR }}")) {
+            Write-Error "Pasta de output nao encontrada: ${{ env.OUT_DIR }}"
+          }
+          Get-ChildItem "${{ env.OUT_DIR }}" -File | Select-Object Name, Length, LastWriteTime | Format-Table -AutoSize
+
+      - name: Upload artefatos do build (Actions)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ics-analyzer-desktop-windows
+          path: |
+            ${{ env.OUT_DIR }}/*.exe
+            ${{ env.OUT_DIR }}/*.zip
+            ${{ env.OUT_DIR }}/*.blockmap
+            ${{ env.OUT_DIR }}/*.yml
+            ${{ env.OUT_DIR }}/*.yaml
+
+      - name: Criar GitHub Release e anexar assets
+        if: startsWith(env.RELEASE_TAG, 'v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          generate_release_notes: true
+          files: |
+            ${{ env.OUT_DIR }}/*.exe
+            ${{ env.OUT_DIR }}/*.zip
+            ${{ env.OUT_DIR }}/*.blockmap
