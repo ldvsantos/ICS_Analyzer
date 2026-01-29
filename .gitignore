@@ -1,0 +1,15 @@
+# Desktop build artifacts
+/desktop/node_modules/
+/desktop/dist/
+
+# Electron caches
+/desktop/.cache/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
