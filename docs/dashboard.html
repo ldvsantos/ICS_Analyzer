@@ -15,7 +15,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
 
   <script src="assets/js/ics_analyzer_theme.js?v=2026-02-03-1" defer></script>
-  <script src="assets/js/ics_analyzer_ispc_reduced_ml_models.js?v=2026-01-29-1" defer></script>
+  <script src="assets/js/ics_analyzer_ispc_reduced_ml_models.js?v=2026-02-03-2" defer></script>
   <script src="assets/js/ics_analyzer_ml.js?v=2026-01-29-1" defer></script>
   <script src="assets/js/ics_analyzer_bank.js?v=2026-01-29-1" defer></script>
   <script src="assets/js/ics_analyzer_fuzzy.js?v=2026-02-03-1" defer></script>
@@ -107,6 +107,15 @@
         <div class="section-title">Drivers (explicação por correlação)</div>
         <p class="lt-muted">Estimado a partir do seu banco local (correlação de Pearson entre entradas reduzidas e o ISPC). Use como <strong>indício</strong>, não como causalidade.</p>
         <div id="dash-drivers" class="dash-drivers"></div>
+      </div>
+
+      <div class="card dash-card-mt">
+        <div class="section-title">Qualidade do modelo (ISPC reduzido)</div>
+        <p class="lt-muted">Métricas de validação cruzada do modelo ridge embutido no sistema, úteis para leitura de confiabilidade por profundidade e variável estimada.</p>
+        <div id="dash-model-quality-summary" class="dash-model-quality-summary"></div>
+        <div class="dash-table-wrap">
+          <table class="table" id="dash-model-quality"></table>
+        </div>
       </div>
 
       <div class="card dash-card-mt">

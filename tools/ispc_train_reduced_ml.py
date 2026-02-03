@@ -63,6 +63,30 @@ def _standardize(df: pd.DataFrame, cols: list[str]) -> tuple[np.ndarray, Standar
     return X, Standardization(mean=means, std=stds)
 
 
+def _fit_standardization(df: pd.DataFrame, cols: list[str]) -> Standardization:
+    means: dict[str, float] = {}
+    stds: dict[str, float] = {}
+
+    for c in cols:
+        v = df[c].to_numpy(dtype=float)
+        m = float(np.nanmean(v))
+        s = float(np.nanstd(v, ddof=0))
+        if not np.isfinite(s) or s == 0:
+            s = 1.0
+        means[c] = m
+        stds[c] = s
+
+    return Standardization(mean=means, std=stds)
+
+
+def _apply_standardization(df: pd.DataFrame, cols: list[str], st: Standardization) -> np.ndarray:
+    arr = []
+    for c in cols:
+        v = df[c].to_numpy(dtype=float)
+        arr.append((v - float(st.mean[c])) / float(st.std[c]))
+    return np.stack(arr, axis=1)
+
+
 def _ridge_fit(X: np.ndarray, y: np.ndarray, alpha: float) -> tuple[float, np.ndarray]:
     """Fit ridge regression with intercept (not penalized).
 
@@ -113,6 +137,36 @@ def _kfold_indices(n: int, k: int, seed: int) -> list[tuple[np.ndarray, np.ndarr
     return out
 
 
+def _group_kfold_indices(groups: np.ndarray, k: int, seed: int) -> list[tuple[np.ndarray, np.ndarray]]:
+    """K-fold por grupos (evita vazamento entre linhas do mesmo grupo)."""
+    if groups.ndim != 1:
+        raise ValueError("groups precisa ser 1D")
+
+    # normalizar para string para evitar comparações estranhas (ex: números vs strings)
+    g = groups.astype(str)
+    uniq = np.unique(g)
+    rng = np.random.default_rng(seed)
+    rng.shuffle(uniq)
+
+    used_k = int(min(int(k), int(len(uniq))))
+    if used_k < 2:
+        return []
+
+    folds = np.array_split(uniq, used_k)
+    out: list[tuple[np.ndarray, np.ndarray]] = []
+    all_idx = np.arange(g.shape[0])
+    for i in range(used_k):
+        test_groups = set(folds[i].tolist())
+        test_mask = np.array([gg in test_groups for gg in g], dtype=bool)
+        test_idx = all_idx[test_mask]
+        train_idx = all_idx[~test_mask]
+        if test_idx.size == 0 or train_idx.size == 0:
+            continue
+        out.append((train_idx, test_idx))
+
+    return out
+
+
 def train_one_target(
     df: pd.DataFrame,
     features: list[str],
@@ -120,8 +174,13 @@ def train_one_target(
     alphas: list[float],
     k: int,
     seed: int,
+    cv_group: str | None,
 ) -> dict:
-    sub = df[features + [target]].dropna()
+    cols = features + [target]
+    if cv_group:
+        cols.append(cv_group)
+
+    sub = df[cols].dropna()
     if sub.empty or sub.shape[0] < max(10, k * 2):
         return {
             "ok": False,
@@ -129,20 +188,50 @@ def train_one_target(
             "n": int(sub.shape[0]),
         }
 
-    X, st = _standardize(sub, features)
     y = sub[target].to_numpy(dtype=float)
 
-    splits = _kfold_indices(X.shape[0], k=k, seed=seed)
+    if cv_group:
+        splits = _group_kfold_indices(sub[cv_group].to_numpy(), k=k, seed=seed)
+        if not splits:
+            return {
+                "ok": False,
+                "reason": "not_enough_groups",
+                "n": int(sub.shape[0]),
+                "cv_group": str(cv_group),
+            }
+    else:
+        splits = _kfold_indices(sub.shape[0], k=k, seed=seed)
+
+    fold_data = []
+    for train_idx, test_idx in splits:
+        train_df = sub.iloc[train_idx]
+        test_df = sub.iloc[test_idx]
+        st_fold = _fit_standardization(train_df, features)
+        X_train = _apply_standardization(train_df, features, st_fold)
+        X_test = _apply_standardization(test_df, features, st_fold)
+        y_train = train_df[target].to_numpy(dtype=float)
+        y_test = test_df[target].to_numpy(dtype=float)
+        fold_data.append((X_train, y_train, X_test, y_test, int(train_idx.size), int(test_idx.size)))
+
+    used_k = int(len(fold_data))
+    if used_k < 2:
+        return {
+            "ok": False,
+            "reason": "not_enough_folds",
+            "n": int(sub.shape[0]),
+            "k": int(k),
+            "cv_group": str(cv_group) if cv_group else None,
+        }
 
     best = None
     for alpha in alphas:
         rmses = []
         r2s = []
-        for train_idx, test_idx in splits:
-            intercept, weights = _ridge_fit(X[train_idx], y[train_idx], alpha=alpha)
-            yhat = _predict(X[test_idx], intercept, weights)
-            rmses.append(_rmse(y[test_idx], yhat))
-            r2s.append(_r2(y[test_idx], yhat))
+        for X_train, y_train, X_test, y_test, _, _ in fold_data:
+            intercept, weights = _ridge_fit(X_train, y_train, alpha=alpha)
+            yhat = _predict(X_test, intercept, weights)
+            rmses.append(_rmse(y_test, yhat))
+            r2s.append(_r2(y_test, yhat))
         mean_rmse = float(np.mean(rmses))
         mean_r2 = float(np.mean(r2s))
         cand = (mean_rmse, -mean_r2, alpha)
@@ -153,14 +242,38 @@ def train_one_target(
     _, best_rmse, best_r2 = best
     best_alpha = float(best[0][2])
 
-    intercept, weights = _ridge_fit(X, y, alpha=best_alpha)
-    yhat_train = _predict(X, intercept, weights)
+    cv_folds = []
+    for X_train, y_train, X_test, y_test, n_train, n_test in fold_data:
+        intercept, weights = _ridge_fit(X_train, y_train, alpha=best_alpha)
+        yhat = _predict(X_test, intercept, weights)
+        cv_folds.append(
+            {
+                "n_train": int(n_train),
+                "n_test": int(n_test),
+                "rmse": _rmse(y_test, yhat),
+                "r2": _r2(y_test, yhat),
+            }
+        )
+
+    # Treino final em todo o conjunto (padronização global para inferência)
+    X_all, st = _standardize(sub, features)
+    intercept, weights = _ridge_fit(X_all, y, alpha=best_alpha)
+    yhat_train = _predict(X_all, intercept, weights)
 
     model = {
         "ok": True,
-        "n": int(X.shape[0]),
+        "n": int(X_all.shape[0]),
         "alpha": best_alpha,
-        "cv": {"k": int(k), "seed": int(seed), "rmse": best_rmse, "r2": best_r2},
+        "cv": {
+            "k": int(used_k),
+            "seed": int(seed),
+            "rmse": best_rmse,
+            "r2": best_r2,
+            "group": (str(cv_group) if cv_group else None),
+            "rmse_std": float(np.std([f["rmse"] for f in cv_folds], ddof=0)) if cv_folds else None,
+            "r2_std": float(np.std([f["r2"] for f in cv_folds], ddof=0)) if cv_folds else None,
+        },
+        "cv_folds": cv_folds,
         "train": {"rmse": _rmse(y, yhat_train), "r2": _r2(y, yhat_train)},
         "standardization": {"mean": st.mean, "std": st.std},
         "intercept": intercept,
@@ -181,7 +294,14 @@ def load_records(path: Path) -> pd.DataFrame:
     return df
 
 
-def train_for_tag(records_csv: Path, tag: str, alphas: list[float], k: int, seed: int) -> dict:
+def train_for_tag(
+    records_csv: Path,
+    tag: str,
+    alphas: list[float],
+    k: int,
+    seed: int,
+    cv_group: str | None,
+) -> dict:
     df = load_records(records_csv)
 
     # manter somente linhas com a profundidade esperada quando disponível
@@ -200,6 +320,7 @@ def train_for_tag(records_csv: Path, tag: str, alphas: list[float], k: int, seed
             alphas=alphas,
             k=k,
             seed=seed,
+            cv_group=cv_group,
         )
 
     return {
@@ -222,6 +343,12 @@ def main() -> None:
     ap.add_argument("--k", type=int, default=5, help="K-fold")
     ap.add_argument("--seed", type=int, default=42, help="Seed")
     ap.add_argument(
+        "--cv-group",
+        type=str,
+        default="",
+        help="Coluna para GroupKFold (ex: parcela, ano, cultura). Vazio = k-fold aleatório por linha.",
+    )
+    ap.add_argument(
         "--out",
         type=str,
         default=str(Path("data") / "ispc" / "ispc_reduced_ml_models.json"),
@@ -239,6 +366,10 @@ def main() -> None:
     data_dir = Path(args.data_dir)
     tags = [t.strip() for t in str(args.tags).split(",") if t.strip()]
     alphas = [float(a.strip()) for a in str(args.alphas).split(",") if a.strip()]
+    cv_group = str(args.cv_group).strip() or None
+
+    if cv_group and cv_group not in META_COLS:
+        raise SystemExit(f"--cv-group inválido. Use uma coluna meta: {', '.join(META_COLS)}")
 
     out = {
         "kind": "ispc_reduced_ridge",
@@ -251,7 +382,14 @@ def main() -> None:
         records_csv = data_dir / f"ispc_records_{tag}.csv"
         if not records_csv.exists():
             raise SystemExit(f"Nao achei {records_csv}")
-        out["by_tag"][tag] = train_for_tag(records_csv, tag=tag, alphas=alphas, k=args.k, seed=args.seed)
+        out["by_tag"][tag] = train_for_tag(
+            records_csv,
+            tag=tag,
+            alphas=alphas,
+            k=args.k,
+            seed=args.seed,
+            cv_group=cv_group,
+        )
 
         out_path = Path(args.out)
         out_path.parent.mkdir(parents=True, exist_ok=True)

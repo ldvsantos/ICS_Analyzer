@@ -57,6 +57,22 @@
   margin-top: 10px;
 }
 
+.dash-model-quality-summary {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.dash-quality-warn td {
+  background: rgba(245, 158, 11, 0.10);
+}
+
+.dash-quality-bad td {
+  background: rgba(239, 68, 68, 0.10);
+}
+
 .dash-years-table {
   width: 100%;
   border-collapse: collapse;

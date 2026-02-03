@@ -96,6 +96,26 @@
       }
     }
 
+    lines.push('');
+    lines.push('model_quality' + sep + 'profundidade_tag' + sep + 'target' + sep + 'n' + sep + 'alpha' + sep + 'cv_group' + sep + 'k' + sep + 'rmse' + sep + 'rmse_std' + sep + 'r2' + sep + 'r2_std' + sep + 'ok' + sep + 'reason');
+    for (const r of (state.modelQuality || [])) {
+      lines.push([
+        'model_quality',
+        r.depthTag,
+        r.target,
+        (Number.isFinite(r.n) ? String(r.n) : ''),
+        (Number.isFinite(r.alpha) ? formatNumberPtBRNoGroup(r.alpha, 4) : ''),
+        (r.cvGroup || ''),
+        (Number.isFinite(r.k) ? String(r.k) : ''),
+        (Number.isFinite(r.rmse) ? formatNumberPtBRNoGroup(r.rmse, 6) : ''),
+        (Number.isFinite(r.rmseStd) ? formatNumberPtBRNoGroup(r.rmseStd, 6) : ''),
+        (Number.isFinite(r.r2) ? formatNumberPtBRNoGroup(r.r2, 6) : ''),
+        (Number.isFinite(r.r2Std) ? formatNumberPtBRNoGroup(r.r2Std, 6) : ''),
+        (r.ok === true ? 'true' : 'false'),
+        (r.reason || ''),
+      ].map(csvEscape).join(sep));
+    }
+
     return lines.join('\r\n');
   }
 
@@ -297,6 +317,150 @@
       out.get(k).push(it);
     }
     return out;
+  }
+
+  function getReducedMLModels() {
+    if (typeof ISPC_ReducedMLModels !== 'undefined' && ISPC_ReducedMLModels) return ISPC_ReducedMLModels;
+    if (typeof window !== 'undefined' && window.ISPC_ReducedMLModels) return window.ISPC_ReducedMLModels;
+    if (typeof require === 'function') {
+      try {
+        // eslint-disable-next-line global-require, import/no-dynamic-require
+        return require('./ics_analyzer_ispc_reduced_ml_models.js');
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  function depthTagLabel(tag) {
+    const t = String(tag || '').trim();
+    if (t === 'dados_1020') return '10–20 cm';
+    return '0–10 cm';
+  }
+
+  function modelQualityFlags(row) {
+    const flags = [];
+
+    if (Number.isFinite(row.n) && row.n < 30) flags.push('n_baixo');
+    if (row.ok !== true) flags.push('falha');
+
+    if (Number.isFinite(row.r2) && row.r2 < 0) flags.push('r2_baixo');
+    if (Number.isFinite(row.r2Std) && row.r2Std > 0.2) flags.push('r2_instavel');
+
+    return flags;
+  }
+
+  function severityFromFlags(flags) {
+    const f = new Set(flags || []);
+    if (f.has('falha') || f.has('r2_baixo')) return 'bad';
+    if (f.has('r2_instavel') || f.has('n_baixo')) return 'warn';
+    return 'ok';
+  }
+
+  function renderModelQualityTable() {
+    const table = document.getElementById('dash-model-quality');
+    if (!table) return [];
+
+    const summary = document.getElementById('dash-model-quality-summary');
+
+    const ml = getReducedMLModels();
+    if (!ml || !ml.by_tag) {
+      table.innerHTML = '<tbody><tr><td>Modelos reduzidos indisponíveis para leitura de qualidade.</td></tr></tbody>';
+      return [];
+    }
+
+    const rows = [];
+    const tags = Object.keys(ml.by_tag || {}).sort();
+    for (const depthTag of tags) {
+      const block = ml.by_tag[depthTag] || {};
+      const models = block.models || {};
+      const targets = Object.keys(models).sort();
+      for (const target of targets) {
+        const m = models[target] || {};
+        const cv = m.cv || {};
+        const folds = Array.isArray(m.cv_folds) ? m.cv_folds : [];
+
+        const rmseStd = Number.isFinite(cv.rmse_std)
+          ? Number(cv.rmse_std)
+          : (folds.length && Number.isFinite(cv.rmse)
+            ? Math.sqrt(folds.reduce((acc, f) => acc + Math.pow((Number(f.rmse) - Number(cv.rmse)), 2), 0) / folds.length)
+            : null);
+
+        const r2Std = Number.isFinite(cv.r2_std)
+          ? Number(cv.r2_std)
+          : (folds.length && Number.isFinite(cv.r2)
+            ? Math.sqrt(folds.reduce((acc, f) => acc + Math.pow((Number(f.r2) - Number(cv.r2)), 2), 0) / folds.length)
+            : null);
+
+        rows.push({
+          depthTag,
+          depthLabel: depthTagLabel(depthTag),
+          target,
+          ok: m.ok === true,
+          reason: m.reason || '',
+          n: Number.isFinite(m.n) ? Number(m.n) : null,
+          alpha: Number.isFinite(m.alpha) ? Number(m.alpha) : null,
+          cvGroup: (cv.group ? String(cv.group) : ''),
+          k: Number.isFinite(cv.k) ? Number(cv.k) : null,
+          rmse: Number.isFinite(cv.rmse) ? Number(cv.rmse) : null,
+          rmseStd: Number.isFinite(rmseStd) ? Number(rmseStd) : null,
+          r2: Number.isFinite(cv.r2) ? Number(cv.r2) : null,
+          r2Std: Number.isFinite(r2Std) ? Number(r2Std) : null,
+        });
+      }
+    }
+
+    for (const r of rows) {
+      r.flags = modelQualityFlags(r);
+      r.severity = severityFromFlags(r.flags);
+    }
+
+    if (summary) {
+      const bad = rows.filter(r => r.severity === 'bad').length;
+      const warn = rows.filter(r => r.severity === 'warn').length;
+      const ok = rows.filter(r => r.severity === 'ok').length;
+      const group = rows.find(r => r.cvGroup)?.cvGroup || '—';
+      const kUsed = rows.find(r => Number.isFinite(r.k))?.k || '—';
+      const total = rows.length;
+      summary.textContent = `Resumo de triagem. Total ${total}. OK ${ok}. Alerta ${warn}. Crítico ${bad}. CV com k ${kUsed} e grupo ${group}.`;
+    }
+
+    table.innerHTML = '';
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th>Profundidade</th><th>Variável</th><th>n</th><th>k</th><th>Grupo</th><th>RMSE (CV)</th><th>R² (CV)</th><th>Alpha</th><th>Status</th></tr>';
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    for (const r of rows) {
+      const tr = document.createElement('tr');
+      if (r.severity === 'bad') tr.classList.add('dash-quality-bad');
+      if (r.severity === 'warn') tr.classList.add('dash-quality-warn');
+      const rmseTxt = Number.isFinite(r.rmse)
+        ? `${formatNumberPtBR(r.rmse, 3)}${Number.isFinite(r.rmseStd) ? ` ± ${formatNumberPtBR(r.rmseStd, 3)}` : ''}`
+        : '—';
+      const r2Txt = Number.isFinite(r.r2)
+        ? `${formatNumberPtBR(r.r2, 3)}${Number.isFinite(r.r2Std) ? ` ± ${formatNumberPtBR(r.r2Std, 3)}` : ''}`
+        : '—';
+      const alphaTxt = Number.isFinite(r.alpha) ? formatNumberPtBR(r.alpha, 3) : '—';
+      const statusTxt = r.ok ? 'OK' : (r.reason ? `Falha (${r.reason})` : 'Falha');
+
+      tr.innerHTML = `
+        <td>${r.depthLabel}</td>
+        <td>${r.target}</td>
+        <td>${Number.isFinite(r.n) ? r.n : '—'}</td>
+        <td>${Number.isFinite(r.k) ? r.k : '—'}</td>
+        <td>${r.cvGroup || '—'}</td>
+        <td>${rmseTxt}</td>
+        <td>${r2Txt}</td>
+        <td>${alphaTxt}</td>
+        <td>${statusTxt}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+
+    return rows;
   }
 
   function pearsonCorrelation(xs, ys) {
@@ -709,6 +873,8 @@
       n: (byYearGlobal.get(year) || []).length,
     }));
 
+    const modelQuality = renderModelQualityTable();
+
     // Estado compartilhado (para exportações)
     const state = {
       generatedAt: new Date().toISOString(),
@@ -722,6 +888,7 @@
       yearsPick,
       driversByDepth,
       recommendations: recs,
+      modelQuality,
     };
     window.ICSDashboardState = state;
 
