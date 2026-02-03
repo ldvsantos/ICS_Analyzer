@@ -80,8 +80,8 @@ function setupCampoCalibracao() {
   if (grpAltura) grpAltura.classList.remove('hidden');
 }
 
-function limpar() {
-  if (!confirm('Deseja limpar todos os dados?')) return;
+function limpar(force = false) {
+  if (!force && !confirm('Deseja limpar todos os dados?')) return;
 
   document.getElementById('projeto').value = '';
   document.getElementById('local').value = '';
