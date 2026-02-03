@@ -209,7 +209,7 @@ def _make_estimator(candidate: Mapping[str, Any], seed: int):
         return RandomForestRegressor(
             n_estimators=int(candidate.get("n_estimators") or 600),
             random_state=int(seed),
-            n_jobs=-1,
+            n_jobs=1,
             max_depth=candidate.get("max_depth"),
             min_samples_leaf=int(candidate.get("min_samples_leaf") or 1),
         )
