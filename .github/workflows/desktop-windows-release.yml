@@ -47,7 +47,8 @@ jobs:
         shell: pwsh
         run: |
           $expected = "v${{ steps.desktop_version.outputs.version }}"
-          if ($env:RELEASE_TAG -ne $expected) {
+          # Aceita tags exatamente iguais (vX.Y.Z) e hotfixes sufixados (vX.Y.Z-qualquer-coisa)
+          if (($env:RELEASE_TAG -ne $expected) -and (-not ($env:RELEASE_TAG -like "$expected-*"))) {
             Write-Error "Tag '$env:RELEASE_TAG' nao confere com a versao do desktop '$expected'. Ajuste desktop/package.json ou crie a tag correta."
           }
 
