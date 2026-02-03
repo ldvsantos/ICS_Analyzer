@@ -9,7 +9,11 @@
   "scripts": {
     "start": "electron .",
     "pack": "electron-builder --config.directories.output=dist_release --dir",
-    "dist": "electron-builder --config.directories.output=dist_release"
+    "dist": "electron-builder --config.directories.output=dist_release",
+    "dist:nsis": "electron-builder --config.directories.output=dist_release --win nsis",
+    "pack:temp": "powershell -NoProfile -Command \"$out=Join-Path $env:TEMP 'ics-analyzer-dist'; .\\node_modules\\.bin\\electron-builder.cmd --config.directories.output=$out --dir\"",
+    "dist:temp": "powershell -NoProfile -Command \"$out=Join-Path $env:TEMP 'ics-analyzer-dist'; .\\node_modules\\.bin\\electron-builder.cmd --config.directories.output=$out\"",
+    "dist:nsis:temp": "powershell -NoProfile -Command \"$out=Join-Path $env:TEMP 'ics-analyzer-dist'; Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $out; .\\node_modules\\.bin\\electron-builder.cmd --config.directories.output=$out --win nsis\""
   },
   "devDependencies": {
     "electron": "^30.0.0",
@@ -23,7 +27,8 @@
     },
     "files": [
       "main.js",
-      "package.json"
+      "package.json",
+      "build/**"
     ],
     "extraResources": [
       {

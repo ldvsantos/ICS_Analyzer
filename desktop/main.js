@@ -1,9 +1,84 @@
 const path = require('path');
-const { app, BrowserWindow, shell } = require('electron');
+const { app, BrowserWindow, Menu, dialog, shell } = require('electron');
 
 const docsPath = app.isPackaged
   ? path.join(process.resourcesPath, 'docs')
   : path.join(__dirname, '..', 'docs');
+
+const appIconPath = app.isPackaged
+  ? path.join(process.resourcesPath, 'app', 'build', 'icon.ico')
+  : path.join(__dirname, 'build', 'icon.ico');
+
+function docsFilePath(fileName) {
+  return path.join(docsPath, fileName);
+}
+
+function navigateTo(mainWindow, fileName) {
+  mainWindow.loadFile(docsFilePath(fileName));
+}
+
+function buildMenu(mainWindow) {
+  const template = [
+    {
+      label: 'Arquivo',
+      submenu: [
+        {
+          label: 'Abrir pasta de dados do app',
+          click: async () => {
+            await shell.openPath(app.getPath('userData'));
+          },
+        },
+        { type: 'separator' },
+        { role: 'quit', label: 'Sair' },
+      ],
+    },
+    {
+      label: 'Navegação',
+      submenu: [
+        {
+          label: 'Sistema (Principal)',
+          click: () => navigateTo(mainWindow, 'sistema.html'),
+        },
+        {
+          label: 'Manual',
+          click: () => navigateTo(mainWindow, 'manual.html'),
+        },
+        {
+          label: 'Análise Conservacionista',
+          click: () => navigateTo(mainWindow, 'long_term_analysis.html'),
+        },
+        { type: 'separator' },
+        { role: 'reload', label: 'Recarregar' },
+        { role: 'toggledevtools', label: 'Ferramentas do Desenvolvedor' },
+      ],
+    },
+    {
+      role: 'help',
+      submenu: [
+        {
+          label: 'Abrir repositório no GitHub',
+          click: async () => {
+            await shell.openExternal('https://github.com/ldvsantos/ICS_Analyzer');
+          },
+        },
+        {
+          label: 'Sobre',
+          click: async () => {
+            await dialog.showMessageBox(mainWindow, {
+              type: 'info',
+              title: 'Sobre o ICS Analyzer',
+              message: 'ICS Analyzer',
+              detail: `Versão ${app.getVersion()}\n\nAplicativo desktop empacotado com Electron.`,
+            });
+          },
+        },
+      ],
+    },
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -12,8 +87,8 @@ function createWindow() {
     minWidth: 1100,
     minHeight: 720,
     show: false,
-    autoHideMenuBar: true,
-    icon: path.join(docsPath, 'favicon.ico'),
+    autoHideMenuBar: false,
+    icon: appIconPath,
     webPreferences: {
       contextIsolation: true,
       sandbox: true,
@@ -30,7 +105,8 @@ function createWindow() {
     return { action: 'deny' };
   });
 
-  mainWindow.loadFile(path.join(docsPath, 'index.html'));
+  buildMenu(mainWindow);
+  navigateTo(mainWindow, 'sistema.html');
 }
 
 app.setAppUserModelId('br.ufs.icsanalyzer');
