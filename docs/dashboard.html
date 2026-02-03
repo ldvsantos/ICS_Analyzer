@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard - ICS Analyzer</title>
+  <link rel="icon" href="favicon.ico" type="image/x-icon" />
+  <link rel="stylesheet" href="assets/css/styles.css?v=2026-02-03-1" />
+  <link rel="stylesheet" href="assets/css/embrapa_theme.css?v=2026-02-03-1" />
+  <link rel="stylesheet" href="assets/css/mobile.css?v=2026-02-03-1" media="(max-width: 1024px)" />
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script src="assets/js/ics_analyzer_theme.js?v=2026-02-03-1" defer></script>
+  <script src="assets/js/ics_analyzer_ispc_reduced_ml_models.js?v=2026-01-29-1" defer></script>
+  <script src="assets/js/ics_analyzer_ml.js?v=2026-01-29-1" defer></script>
+  <script src="assets/js/ics_analyzer_bank.js?v=2026-01-29-1" defer></script>
+  <script src="assets/js/ics_analyzer_fuzzy.js?v=2026-02-03-1" defer></script>
+  <script src="assets/js/ics_analyzer_dashboard.js?v=2026-02-03-1" defer></script>
+</head>
+<body>
+  <header>
+    <div class="container header-flex">
+      <div class="brand">
+        <img src="assets/img/logo.png" alt="Logo ICS" style="height: 50px; background: rgba(255, 255, 255, 0); padding: 2px; border-radius: 4px;">
+        <div>
+          <h1>ICS Analyzer</h1>
+          <p>Dashboard (banco local)</p>
+        </div>
+      </div>
+      <nav class="nav-main">
+        <a href="index.html" class="nav-link">Início</a>
+        <a href="manual.html" class="nav-link">Manual</a>
+        <a href="sistema.html" class="nav-link">Análises</a>
+        <a href="long_term_analysis.html" class="nav-link">Análise Conservacionista</a>
+        <a href="dashboard.html" class="nav-link active">Dashboard</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main-embrapa">
+    <section class="container" style="margin-top: 24px;">
+      <h2>Dashboard</h2>
+      <p class="lead">Resumo do histórico armazenado no banco local (IndexedDB).</p>
+
+      <div class="grid" style="margin-top: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+        <div class="result-box">
+          <div class="result-label">Registros ISPC (total)</div>
+          <div class="result-value" id="dash-total">—</div>
+        </div>
+        <div class="result-box">
+          <div class="result-label">Registros com ISPC calculável</div>
+          <div class="result-value" id="dash-valid">—</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 16px;">
+        <div class="section-title">Série histórica</div>
+        <p class="lt-muted" id="dash-status" style="margin-top: 6px;">—</p>
+        <div style="margin-top: 10px;">
+          <canvas id="dash-ispc-series" height="120"></canvas>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 16px;">
+        <div class="section-title">Recomendações (MVP)</div>
+        <p class="lt-muted">Geradas automaticamente a partir da tendência do histórico.</p>
+        <ul id="dash-recs" style="padding-left: 18px; margin-top: 8px;"></ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; <span id="current-year"></span> ICS Analyzer. Dashboard local.</p>
+    </div>
+  </footer>
+</body>
+</html>

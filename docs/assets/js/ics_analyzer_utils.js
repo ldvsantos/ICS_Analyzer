@@ -28,21 +28,34 @@ function clamp01(x) {
   return Math.max(0, Math.min(1, x));
 }
 
+const __icsTextureNormCache = new Map();
+const __icsTextureUsleCache = new Map();
+
+function normalizeTextureKey(textura) {
+  return String(textura ?? '').trim().toLowerCase();
+}
+
 function textureToKNorm(textura) {
-  const t = String(textura ?? '').toLowerCase();
-  if (t === 'arenosa') return 0.8;
-  if (t === 'media') return 0.5;
-  if (t === 'argilosa') return 0.3;
-  return null;
+  const t = normalizeTextureKey(textura);
+  if (__icsTextureNormCache.has(t)) return __icsTextureNormCache.get(t);
+  let v = null;
+  if (t === 'arenosa') v = 0.8;
+  else if (t === 'media') v = 0.5;
+  else if (t === 'argilosa') v = 0.3;
+  __icsTextureNormCache.set(t, v);
+  return v;
 }
 
 function textureToKUsle(textura) {
-  const t = String(textura ?? '').toLowerCase();
+  const t = normalizeTextureKey(textura);
+  if (__icsTextureUsleCache.has(t)) return __icsTextureUsleCache.get(t);
   // Aproximações operacionais (ordem de grandeza). Não usar como laudo.
-  if (t === 'arenosa') return 0.05;
-  if (t === 'media') return 0.03;
-  if (t === 'argilosa') return 0.02;
-  return null;
+  let v = null;
+  if (t === 'arenosa') v = 0.05;
+  else if (t === 'media') v = 0.03;
+  else if (t === 'argilosa') v = 0.02;
+  __icsTextureUsleCache.set(t, v);
+  return v;
 }
 
 function estimateLSRUSLE(declividadePct, comprimentoM) {

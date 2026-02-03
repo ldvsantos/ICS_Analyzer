@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const https = require('https');
 const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = require('electron');
 
@@ -50,6 +51,63 @@ function addRecentProject(filePath) {
   const existing = readRecentProjects();
   const next = [clean, ...existing.filter((p) => p !== clean)].slice(0, 12);
   writeRecentProjects(next);
+}
+
+function getBackupsRoot() {
+  return path.join(app.getPath('userData'), 'backups');
+}
+
+function safeFileBaseName(filePath) {
+  const base = path.basename(String(filePath ?? 'projeto.icsproj.json'));
+  return base.replace(/[\\/:*?"<>|]+/g, '-');
+}
+
+function projectBackupKey(filePath) {
+  try {
+    const abs = path.resolve(String(filePath ?? ''));
+    return crypto.createHash('sha1').update(abs).digest('hex');
+  } catch {
+    return crypto.createHash('sha1').update(String(filePath ?? '')).digest('hex');
+  }
+}
+
+function writeProjectBackup(filePath, data) {
+  const root = getBackupsRoot();
+  fs.mkdirSync(root, { recursive: true });
+
+  const key = projectBackupKey(filePath);
+  const dir = path.join(root, key);
+  fs.mkdirSync(dir, { recursive: true });
+
+  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+  const base = safeFileBaseName(filePath);
+  const outPath = path.join(dir, `${ts}__${base}.icsbak.json`);
+
+  const payload = {
+    kind: 'ics_backup',
+    createdAt: new Date().toISOString(),
+    appVersion: app.getVersion(),
+    filePath: String(filePath ?? ''),
+    data,
+  };
+  fs.writeFileSync(outPath, JSON.stringify(payload, null, 2), 'utf8');
+
+  // Retenção (por projeto): mantém os 20 backups mais recentes.
+  const keep = 20;
+  const files = fs.readdirSync(dir)
+    .filter((f) => f.endsWith('.icsbak.json'))
+    .sort()
+    .reverse();
+  const toDelete = files.slice(keep);
+  for (const f of toDelete) {
+    try {
+      fs.unlinkSync(path.join(dir, f));
+    } catch {
+      // ignore
+    }
+  }
+
+  return { backupPath: outPath, backupsDir: dir, backupCount: Math.min(files.length, keep) };
 }
 
 function compareVersions(a, b) {
@@ -155,6 +213,13 @@ function buildMenu(mainWindow) {
             await shell.openPath(app.getPath('userData'));
           },
         },
+        {
+          label: 'Abrir pasta de backups',
+          click: async () => {
+            fs.mkdirSync(getBackupsRoot(), { recursive: true });
+            await shell.openPath(getBackupsRoot());
+          },
+        },
         { type: 'separator' },
         { role: 'quit', label: 'Sair' },
       ],
@@ -173,6 +238,10 @@ function buildMenu(mainWindow) {
         {
           label: 'Análise Conservacionista',
           click: () => navigateTo(mainWindow, 'long_term_analysis.html'),
+        },
+        {
+          label: 'Dashboard',
+          click: () => navigateTo(mainWindow, 'dashboard.html'),
         },
         { type: 'separator' },
         {
@@ -257,6 +326,16 @@ app.setAppUserModelId('br.ufs.icsanalyzer');
 function setupIpc(mainWindow) {
   ipcMain.handle('app:getVersion', () => app.getVersion());
 
+  ipcMain.handle('app:openBackupsFolder', async () => {
+    try {
+      fs.mkdirSync(getBackupsRoot(), { recursive: true });
+      await shell.openPath(getBackupsRoot());
+      return { ok: true, path: getBackupsRoot() };
+    } catch (err) {
+      return { ok: false, error: String(err?.message || err) };
+    }
+  });
+
   ipcMain.on('window:setTitle', (event, title) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win) win.setTitle(String(title ?? 'ICS Analyzer'));
@@ -322,9 +401,15 @@ function setupIpc(mainWindow) {
     if (!clean) return { canceled: true };
     try {
       fs.writeFileSync(clean, JSON.stringify(data, null, 2), 'utf8');
+      let backupInfo = null;
+      try {
+        backupInfo = writeProjectBackup(clean, data);
+      } catch {
+        backupInfo = null;
+      }
       addRecentProject(clean);
       buildMenu(mainWindow);
-      return { canceled: false, filePath: clean };
+      return { canceled: false, filePath: clean, ...backupInfo };
     } catch (err) {
       await dialog.showMessageBox(mainWindow, {
         type: 'error',

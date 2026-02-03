@@ -313,7 +313,11 @@ window.addEventListener('load', () => {
       const res = await desktopApi.saveProject({ filePath: currentProjectPath, data });
       if (!res?.canceled) {
         setDirty(false);
-        mostrarMensagem('✓ Projeto salvo com sucesso.', 'success');
+        if (res?.backupPath) {
+          mostrarMensagem('✓ Projeto salvo. Backup/versionamento atualizado.', 'success');
+        } else {
+          mostrarMensagem('✓ Projeto salvo com sucesso.', 'success');
+        }
       }
     };
 
@@ -394,6 +398,12 @@ window.addEventListener('load', () => {
 
         if (action === 'app:checkUpdates') {
           await desktopApi.checkForUpdates();
+          return;
+        }
+
+        if (action === 'app:openBackupsFolder') {
+          await desktopApi.openBackupsFolder();
+          return;
         }
       } catch (err) {
         console.error('Ação desktop falhou:', action, err);

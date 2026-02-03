@@ -18,5 +18,7 @@ contextBridge.exposeInMainWorld('icsDesktop', {
   saveProjectAs: ({ data }) => ipcRenderer.invoke('project:saveAs', { data }),
   clearRecentProjects: () => ipcRenderer.invoke('project:clearRecents'),
 
+  openBackupsFolder: () => ipcRenderer.invoke('app:openBackupsFolder'),
+
   checkForUpdates: () => ipcRenderer.invoke('app:checkUpdates'),
 });

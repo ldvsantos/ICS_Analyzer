@@ -50,6 +50,21 @@ function exportarPDF() {
       notas: document.getElementById('notas')?.value ?? window.ultimaDados.notas,
     };
 
+    // Metadados do PDF (facilita arquivamento, busca e rastreabilidade)
+    try {
+      const title = `ICS — ${String(d.projeto || 'Sem título')}`;
+      const author = String(d.operador || '');
+      doc.setProperties({
+        title,
+        subject: 'Relatório ICS (Índice de Cobertura do Solo)',
+        author,
+        keywords: 'ICS, Índice de Cobertura do Solo, cobertura, laudo, campo',
+        creator: 'ICS Analyzer',
+      });
+    } catch {
+      // ignore
+    }
+
     // --- Função Auxiliar: Texto Vertical ---
     function verticalText(text, x, y, align = 'center') {
       doc.saveGraphicsState();

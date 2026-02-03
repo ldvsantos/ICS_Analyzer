@@ -14,6 +14,23 @@
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
+    // Metadados do PDF (facilita arquivamento)
+    try {
+      const subj = 'Relatório — Análise Conservacionista (SQ e fuzzy)';
+      const title = data?.projectName
+        ? `ICS — ${subj} — ${String(data.projectName)}`
+        : `ICS — ${subj}`;
+      doc.setProperties({
+        title,
+        subject: subj,
+        author: 'ICS Analyzer',
+        keywords: 'ICS, SQ, ISPC, fuzzy, análise conservacionista',
+        creator: 'ICS Analyzer',
+      });
+    } catch {
+      // ignore
+    }
+
     const pageW = (doc.internal && doc.internal.pageSize && typeof doc.internal.pageSize.getWidth === 'function')
       ? doc.internal.pageSize.getWidth()
       : 210;

@@ -28,6 +28,28 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
+/* Tema: claro/escuro (via body.theme-dark) */
+body.theme-dark {
+  --primary: #0b1220;
+  --primary-light: #111827;
+  --accent: #60a5fa;
+  --accent-hover: #3b82f6;
+  --success: #34d399;
+  --success-hover: #10b981;
+  --warning: #fbbf24;
+  --danger: #f87171;
+
+  --bg-body: #0b1220;
+  --bg-card: #0f172a;
+
+  --text-main: #e5e7eb;
+  --text-secondary: #94a3b8;
+  --text-inverse: #ffffff;
+
+  --border-color: #1f2937;
+  --input-focus-ring: rgba(96, 165, 250, 0.25);
+}
+
 /* Base Reset */
 * {
   margin: 0;
@@ -467,6 +489,24 @@ nav a:hover, nav a.active, .nav a:hover, .nav-link:hover {
   color: var(--text-inverse);
   border-bottom-color: var(--accent);
   background: transparent;
+}
+
+/* Botão de tema (injetado via JS) */
+.theme-toggle {
+  margin-left: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-inverse);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.14);
 }
 
 /* Content */
