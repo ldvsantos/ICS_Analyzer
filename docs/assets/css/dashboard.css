@@ -1,0 +1,107 @@
+/* CSS específico do Dashboard (evita estilos inline) */
+
+.dash-logo-img {
+  height: 50px;
+  background: rgba(255, 255, 255, 0);
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.dash-section {
+  margin-top: 24px;
+}
+
+.dash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0 4px 0;
+}
+
+.dash-actions .btn {
+  padding: 0.55rem 1.05rem;
+}
+
+.dash-grid-2 {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dash-grid-3 {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dash-card-mt {
+  margin-top: 16px;
+}
+
+.dash-status {
+  margin-top: 6px;
+}
+
+.dash-mt-10 {
+  margin-top: 10px;
+}
+
+.dash-card-no-mb {
+  margin-bottom: 0;
+}
+
+.dash-table-wrap {
+  overflow-x: auto;
+  margin-top: 10px;
+}
+
+.dash-years-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dash-years-table th,
+.dash-years-table td {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dash-drivers {
+  margin-top: 10px;
+}
+
+.dash-driver-card {
+  margin: 0 0 10px 0;
+  padding: 12px 14px;
+}
+
+.dash-driver-title {
+  margin-bottom: 10px;
+}
+
+.dash-driver-list {
+  padding-left: 18px;
+  margin: 0;
+}
+
+.dash-driver-hint {
+  margin-top: 8px;
+}
+
+.dash-recs {
+  padding-left: 18px;
+  margin-top: 8px;
+}
+
+@media (max-width: 1024px) {
+  .dash-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .dash-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}

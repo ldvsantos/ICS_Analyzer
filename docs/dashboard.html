@@ -8,8 +8,11 @@
   <link rel="stylesheet" href="assets/css/styles.css?v=2026-02-03-1" />
   <link rel="stylesheet" href="assets/css/embrapa_theme.css?v=2026-02-03-1" />
   <link rel="stylesheet" href="assets/css/mobile.css?v=2026-02-03-1" media="(max-width: 1024px)" />
+  <link rel="stylesheet" href="assets/css/dashboard.css?v=2026-02-03-1" />
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
 
   <script src="assets/js/ics_analyzer_theme.js?v=2026-02-03-1" defer></script>
   <script src="assets/js/ics_analyzer_ispc_reduced_ml_models.js?v=2026-01-29-1" defer></script>
@@ -22,7 +25,7 @@
   <header>
     <div class="container header-flex">
       <div class="brand">
-        <img src="assets/img/logo.png" alt="Logo ICS" style="height: 50px; background: rgba(255, 255, 255, 0); padding: 2px; border-radius: 4px;">
+        <img src="assets/img/logo.png" alt="Logo ICS" class="dash-logo-img">
         <div>
           <h1>ICS Analyzer</h1>
           <p>Dashboard (banco local)</p>
@@ -39,11 +42,16 @@
   </header>
 
   <main class="main-embrapa">
-    <section class="container" style="margin-top: 24px;">
+    <section class="container dash-section">
       <h2>Dashboard</h2>
       <p class="lead">Resumo do histórico armazenado no banco local (IndexedDB).</p>
 
-      <div class="grid" style="margin-top: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+      <div class="dash-actions" role="group" aria-label="Exportações do dashboard">
+        <button class="btn btn-secondary" id="dash-export-csv" type="button">Exportar CSV</button>
+        <button class="btn btn-primary" id="dash-export-pdf" type="button">Exportar PDF</button>
+      </div>
+
+      <div class="dash-grid-2">
         <div class="result-box">
           <div class="result-label">Registros ISPC (total)</div>
           <div class="result-value" id="dash-total">—</div>
@@ -54,18 +62,65 @@
         </div>
       </div>
 
-      <div class="card" style="margin-top: 16px;">
+      <div class="dash-grid-3">
+        <div class="result-box">
+          <div class="result-label">Último ano no banco</div>
+          <div class="result-value" id="dash-last-year">—</div>
+        </div>
+        <div class="result-box">
+          <div class="result-label">ISPC médio (global)</div>
+          <div class="result-value" id="dash-ispc-mean">—</div>
+        </div>
+        <div class="result-box">
+          <div class="result-label">Tendência (ponto/ano)</div>
+          <div class="result-value" id="dash-trend">—</div>
+        </div>
+      </div>
+
+      <div class="card dash-card-mt">
         <div class="section-title">Série histórica</div>
-        <p class="lt-muted" id="dash-status" style="margin-top: 6px;">—</p>
-        <div style="margin-top: 10px;">
+        <p class="lt-muted dash-status" id="dash-status">—</p>
+        <div class="dash-mt-10">
           <canvas id="dash-ispc-series" height="120"></canvas>
         </div>
       </div>
 
-      <div class="card" style="margin-top: 16px;">
+      <div class="dash-grid-2">
+        <div class="card dash-card-no-mb">
+          <div class="section-title">Comparação (último ano)</div>
+          <p class="lt-muted">ISPC médio por profundidade no último ano disponível.</p>
+          <div class="dash-mt-10">
+            <canvas id="dash-ispc-lastyear" height="140"></canvas>
+          </div>
+        </div>
+
+        <div class="card dash-card-no-mb">
+          <div class="section-title">Amostras por ano</div>
+          <p class="lt-muted">Quantidade de registros no banco local por ano.</p>
+          <div class="dash-mt-10">
+            <canvas id="dash-count-by-year" height="140"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="card dash-card-mt">
+        <div class="section-title">Drivers (explicação por correlação)</div>
+        <p class="lt-muted">Estimado a partir do seu banco local (correlação de Pearson entre entradas reduzidas e o ISPC). Use como <strong>indício</strong>, não como causalidade.</p>
+        <div id="dash-drivers" class="dash-drivers"></div>
+      </div>
+
+      <div class="card dash-card-mt">
+        <div class="section-title">Melhores e piores anos</div>
+        <p class="lt-muted">Média anual do ISPC (global). Útil para identificar anos “fora da curva”.</p>
+        <div class="dash-table-wrap">
+          <table class="table dash-years-table" id="dash-years-table"></table>
+        </div>
+      </div>
+
+      <div class="card dash-card-mt">
         <div class="section-title">Recomendações (MVP)</div>
         <p class="lt-muted">Geradas automaticamente a partir da tendência do histórico.</p>
-        <ul id="dash-recs" style="padding-left: 18px; margin-top: 8px;"></ul>
+        <ul id="dash-recs" class="dash-recs"></ul>
       </div>
     </section>
   </main>
