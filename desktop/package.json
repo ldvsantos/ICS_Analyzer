@@ -10,7 +10,9 @@
     "start": "electron .",
     "pack": "electron-builder --config.directories.output=dist_release --dir",
     "dist": "electron-builder --config.directories.output=dist_release",
+    "postdist": "node tools/make_stable_release_assets.js",
     "dist:nsis": "electron-builder --config.directories.output=dist_release --win nsis",
+    "stable:assets": "node tools/make_stable_release_assets.js",
     "pack:temp": "powershell -NoProfile -Command \"$out=Join-Path $env:TEMP 'ics-analyzer-dist'; .\\node_modules\\.bin\\electron-builder.cmd --config.directories.output=$out --dir\"",
     "dist:temp": "powershell -NoProfile -Command \"$out=Join-Path $env:TEMP 'ics-analyzer-dist'; .\\node_modules\\.bin\\electron-builder.cmd --config.directories.output=$out\"",
     "dist:nsis:temp": "powershell -NoProfile -Command \"$out=Join-Path $env:TEMP 'ics-analyzer-dist'; Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $out; .\\node_modules\\.bin\\electron-builder.cmd --config.directories.output=$out --win nsis\""
