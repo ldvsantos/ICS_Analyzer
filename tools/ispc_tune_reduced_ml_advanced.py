@@ -344,6 +344,26 @@ def write_csv(rows: list[dict[str, Any]], out_csv: Path) -> None:
             w.writerow({k: ("" if r.get(k) is None else r.get(k)) for k in fieldnames})
 
 
+def write_js_umd(*, obj: Any, path: Path, global_name: str) -> None:
+    """Escreve um bundle JS simples para consumo em docs/."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
+    js = (
+        "// Gerado automaticamente\n"
+        "(function (root, factory) {\n"
+        "  if (typeof module === 'object' && module.exports) {\n"
+        "    module.exports = factory();\n"
+        "  } else {\n"
+        f"    root.{global_name} = factory();\n"
+        "  }\n"
+        "})(typeof self !== 'undefined' ? self : this, function () {\n"
+        f"  return {payload};\n"
+        "});\n"
+    )
+    path.write_text(js, encoding="utf-8")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Tuning automático para modelos reduzidos do ISPC")
     ap.add_argument("--data-dir", type=str, default=str(Path("data") / "ispc"), help="Diretório data/ispc")
@@ -360,14 +380,20 @@ def main() -> None:
     ap.add_argument(
         "--out-csv",
         type=str,
-        default=str(Path("data") / "ispc" / "ispc_reduced_ml_tuning_report.csv"),
+        default="",
         help="CSV de saída com todos os candidatos",
     )
     ap.add_argument(
         "--out-json",
         type=str,
-        default=str(Path("data") / "ispc" / "ispc_reduced_ml_tuning_best.json"),
+        default="",
         help="JSON de saída com o melhor candidato por target",
+    )
+    ap.add_argument(
+        "--out-js",
+        type=str,
+        default="",
+        help="Opcional. Saída JS (UMD) do melhor tuning para consumo em docs/",
     )
 
     args = ap.parse_args()
@@ -433,15 +459,21 @@ def main() -> None:
             best_row = choose_best(per_target)
             best["by_tag"][tag][target] = best_row or {"ok": False, "reason": "no_ok_candidates"}
 
-    out_csv = Path(str(args.out_csv))
-    out_json = Path(str(args.out_json))
+    out_csv = Path(str(args.out_csv)).expanduser() if str(args.out_csv).strip() else (data_dir / "ispc_reduced_ml_tuning_report.csv")
+    out_json = Path(str(args.out_json)).expanduser() if str(args.out_json).strip() else (data_dir / "ispc_reduced_ml_tuning_best.json")
 
     write_csv(all_rows, out_csv)
     out_json.parent.mkdir(parents=True, exist_ok=True)
-    out_json.write_text(json.dumps(best, ensure_ascii=False, indent=2), encoding="utf-8")
+    out_json.write_text(json.dumps(best, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     print(f"OK: {out_csv}")
     print(f"OK: {out_json}")
+
+    out_js = str(args.out_js).strip()
+    if out_js:
+        js_path = Path(out_js).expanduser()
+        write_js_umd(obj=best, path=js_path, global_name="ISPC_ReducedTuningBest")
+        print(f"OK: {js_path}")
 
 
 if __name__ == "__main__":

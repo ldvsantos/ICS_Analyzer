@@ -116,6 +116,59 @@
       ].map(csvEscape).join(sep));
     }
 
+    if (state.modelQualityAlerts && Array.isArray(state.modelQualityAlerts.items)) {
+      const a = state.modelQualityAlerts;
+      lines.push('');
+      lines.push('model_quality_alerts_meta' + sep + 'campo' + sep + 'valor');
+      lines.push(['model_quality_alerts_meta', 'ok', String(a.counts?.ok ?? '')].map(csvEscape).join(sep));
+      lines.push(['model_quality_alerts_meta', 'alerta', String(a.counts?.alerta ?? '')].map(csvEscape).join(sep));
+      lines.push(['model_quality_alerts_meta', 'critico', String(a.counts?.critico ?? '')].map(csvEscape).join(sep));
+      lines.push(['model_quality_alerts_meta', 'min_n', String(a.thresholds?.min_n ?? '')].map(csvEscape).join(sep));
+      lines.push(['model_quality_alerts_meta', 'min_r2', String(a.thresholds?.min_r2 ?? '')].map(csvEscape).join(sep));
+      lines.push(['model_quality_alerts_meta', 'max_r2_std', String(a.thresholds?.max_r2_std ?? '')].map(csvEscape).join(sep));
+
+      lines.push('');
+      lines.push('model_quality_alerts' + sep + 'profundidade_tag' + sep + 'target' + sep + 'severity' + sep + 'flags' + sep + 'n' + sep + 'k' + sep + 'cv_group' + sep + 'rmse' + sep + 'rmse_std' + sep + 'r2' + sep + 'r2_std');
+      for (const it of (a.items || [])) {
+        lines.push([
+          'model_quality_alerts',
+          it.depth_tag,
+          it.target,
+          it.severity,
+          Array.isArray(it.flags) ? it.flags.join(',') : '',
+          (Number.isFinite(it.n) ? String(it.n) : ''),
+          (Number.isFinite(it.k) ? String(it.k) : ''),
+          (it.cv_group || ''),
+          (Number.isFinite(it.rmse) ? formatNumberPtBRNoGroup(it.rmse, 6) : ''),
+          (Number.isFinite(it.rmse_std) ? formatNumberPtBRNoGroup(it.rmse_std, 6) : ''),
+          (Number.isFinite(it.r2) ? formatNumberPtBRNoGroup(it.r2, 6) : ''),
+          (Number.isFinite(it.r2_std) ? formatNumberPtBRNoGroup(it.r2_std, 6) : ''),
+        ].map(csvEscape).join(sep));
+      }
+    }
+
+    if (Array.isArray(state.tuningBest)) {
+      lines.push('');
+      lines.push('tuning_best' + sep + 'profundidade_tag' + sep + 'target' + sep + 'algo' + sep + 'n' + sep + 'k' + sep + 'cv_group' + sep + 'rmse' + sep + 'rmse_std' + sep + 'r2' + sep + 'r2_std' + sep + 'ok' + sep + 'params');
+      for (const r of (state.tuningBest || [])) {
+        lines.push([
+          'tuning_best',
+          r.depthTag,
+          r.target,
+          r.algo,
+          (Number.isFinite(r.n) ? String(r.n) : ''),
+          (Number.isFinite(r.k) ? String(r.k) : ''),
+          (r.cvGroup || ''),
+          (Number.isFinite(r.rmse) ? formatNumberPtBRNoGroup(r.rmse, 6) : ''),
+          (Number.isFinite(r.rmseStd) ? formatNumberPtBRNoGroup(r.rmseStd, 6) : ''),
+          (Number.isFinite(r.r2) ? formatNumberPtBRNoGroup(r.r2, 6) : ''),
+          (Number.isFinite(r.r2Std) ? formatNumberPtBRNoGroup(r.r2Std, 6) : ''),
+          (r.ok === true ? 'true' : 'false'),
+          (r.params || ''),
+        ].map(csvEscape).join(sep));
+      }
+    }
+
     return lines.join('\r\n');
   }
 
@@ -320,9 +373,18 @@
   }
 
   function getReducedMLModels() {
+    if (typeof ISPC_ReducedMLModelsProduction !== 'undefined' && ISPC_ReducedMLModelsProduction) return ISPC_ReducedMLModelsProduction;
+    if (typeof window !== 'undefined' && window.ISPC_ReducedMLModelsProduction) return window.ISPC_ReducedMLModelsProduction;
     if (typeof ISPC_ReducedMLModels !== 'undefined' && ISPC_ReducedMLModels) return ISPC_ReducedMLModels;
     if (typeof window !== 'undefined' && window.ISPC_ReducedMLModels) return window.ISPC_ReducedMLModels;
     if (typeof require === 'function') {
+      try {
+        // eslint-disable-next-line global-require, import/no-dynamic-require
+        const prod = require('./ispc_reduced_ml_models_production.js');
+        if (prod) return prod;
+      } catch {
+        // ignore
+      }
       try {
         // eslint-disable-next-line global-require, import/no-dynamic-require
         return require('./ics_analyzer_ispc_reduced_ml_models.js');
@@ -330,6 +392,18 @@
         return null;
       }
     }
+    return null;
+  }
+
+  function getModelQualityAlerts() {
+    if (typeof ISPC_ModelQualityAlerts !== 'undefined' && ISPC_ModelQualityAlerts) return ISPC_ModelQualityAlerts;
+    if (typeof window !== 'undefined' && window.ISPC_ModelQualityAlerts) return window.ISPC_ModelQualityAlerts;
+    return null;
+  }
+
+  function getReducedTuningBest() {
+    if (typeof ISPC_ReducedTuningBest !== 'undefined' && ISPC_ReducedTuningBest) return ISPC_ReducedTuningBest;
+    if (typeof window !== 'undefined' && window.ISPC_ReducedTuningBest) return window.ISPC_ReducedTuningBest;
     return null;
   }
 
@@ -369,6 +443,14 @@
       table.innerHTML = '<tbody><tr><td>Modelos reduzidos indisponíveis para leitura de qualidade.</td></tr></tbody>';
       return [];
     }
+
+    const mlKind = (ml && typeof ml.kind === 'string' && ml.kind.trim()) ? ml.kind.trim() : '';
+    const promoPolicy = (ml && ml.promotion && typeof ml.promotion.policy === 'string' && ml.promotion.policy.trim())
+      ? ml.promotion.policy.trim()
+      : '';
+    const promoStdWeight = (ml && ml.promotion && Number.isFinite(Number(ml.promotion.std_weight)))
+      ? Number(ml.promotion.std_weight)
+      : null;
 
     const rows = [];
     const tags = Object.keys(ml.by_tag || {}).sort();
@@ -423,7 +505,11 @@
       const group = rows.find(r => r.cvGroup)?.cvGroup || '—';
       const kUsed = rows.find(r => Number.isFinite(r.k))?.k || '—';
       const total = rows.length;
-      summary.textContent = `Resumo de triagem. Total ${total}. OK ${ok}. Alerta ${warn}. Crítico ${bad}. CV com k ${kUsed} e grupo ${group}.`;
+      const kindTxt = mlKind ? ` Bundle ${mlKind}.` : '';
+      const policyTxt = promoPolicy
+        ? ` Promoção ${promoPolicy}${Number.isFinite(promoStdWeight) ? ` (std_weight=${formatNumberPtBR(promoStdWeight, 2)})` : ''}.`
+        : '';
+      summary.textContent = `Resumo de triagem. Total ${total}. OK ${ok}. Alerta ${warn}. Crítico ${bad}. CV com k ${kUsed} e grupo ${group}.${kindTxt}${policyTxt}`;
     }
 
     table.innerHTML = '';
@@ -454,6 +540,148 @@
         <td>${rmseTxt}</td>
         <td>${r2Txt}</td>
         <td>${alphaTxt}</td>
+        <td>${statusTxt}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+
+    return rows;
+  }
+
+  function renderModelQualityAlertsPanel() {
+    const root = document.getElementById('dash-model-quality-alerts');
+    if (!root) return null;
+
+    const alerts = getModelQualityAlerts();
+    if (!alerts || !Array.isArray(alerts.items)) {
+      root.textContent = 'Alertas operacionais indisponíveis para leitura.';
+      return null;
+    }
+
+    const counts = alerts.counts || {};
+    const th = alerts.thresholds || {};
+
+    const items = alerts.items || [];
+    const crit = items.filter((it) => it.severity === 'critico');
+    const warn = items.filter((it) => it.severity === 'alerta');
+    const ok = items.filter((it) => it.severity === 'ok');
+
+    root.innerHTML = '';
+
+    const p = document.createElement('p');
+    p.className = 'lt-muted';
+    const minN = Number.isFinite(Number(th.min_n)) ? String(th.min_n) : '—';
+    const minR2 = Number.isFinite(Number(th.min_r2)) ? formatNumberPtBR(Number(th.min_r2), 3) : '—';
+    const maxStd = Number.isFinite(Number(th.max_r2_std)) ? formatNumberPtBR(Number(th.max_r2_std), 3) : '—';
+    const okN = Number.isFinite(Number(counts.ok)) ? String(counts.ok) : String(ok.length);
+    const warnN = Number.isFinite(Number(counts.alerta)) ? String(counts.alerta) : String(warn.length);
+    const badN = Number.isFinite(Number(counts.critico)) ? String(counts.critico) : String(crit.length);
+    p.textContent = `Alertas a partir de thresholds. Total ${items.length}. OK ${okN}. Alerta ${warnN}. Crítico ${badN}. min n ${minN}. min R² ${minR2}. max R² std ${maxStd}.`;
+    root.appendChild(p);
+
+    if (crit.length) {
+      const ul = document.createElement('ul');
+      ul.className = 'dash-recs';
+      for (const it of crit.slice(0, 10)) {
+        const li = document.createElement('li');
+        const flagsTxt = Array.isArray(it.flags) && it.flags.length ? ` (${it.flags.join(', ')})` : '';
+        li.textContent = `${depthTagLabel(it.depth_tag)} ${String(it.target || '')}${flagsTxt}`;
+        ul.appendChild(li);
+      }
+      root.appendChild(ul);
+    }
+
+    return alerts;
+  }
+
+  function tuningFlags(row) {
+    const flags = [];
+    if (row.ok !== true) flags.push('falha');
+    if (Number.isFinite(row.r2) && row.r2 < 0) flags.push('r2_baixo');
+    if (Number.isFinite(row.r2Std) && row.r2Std > 0.2) flags.push('r2_instavel');
+    return flags;
+  }
+
+  function renderTuningBestTable() {
+    const table = document.getElementById('dash-model-tuning');
+    if (!table) return [];
+    const summary = document.getElementById('dash-model-tuning-summary');
+
+    const data = getReducedTuningBest();
+    if (!data || !data.by_tag) {
+      table.innerHTML = '<tbody><tr><td>Tuning sugerido indisponível para leitura.</td></tr></tbody>';
+      if (summary) summary.textContent = '';
+      return [];
+    }
+
+    const rows = [];
+    const tags = Object.keys(data.by_tag || {}).sort();
+    for (const depthTag of tags) {
+      const block = data.by_tag[depthTag] || {};
+      const targets = Object.keys(block).sort();
+      for (const target of targets) {
+        const r = block[target] || {};
+        rows.push({
+          depthTag,
+          depthLabel: depthTagLabel(depthTag),
+          target,
+          ok: r.ok === true,
+          algo: r.algo || '',
+          params: r.params || '',
+          cvGroup: r.cv_group || '',
+          n: Number.isFinite(r.n) ? Number(r.n) : null,
+          k: Number.isFinite(r.k_used) ? Number(r.k_used) : null,
+          rmse: Number.isFinite(r.rmse) ? Number(r.rmse) : null,
+          rmseStd: Number.isFinite(r.rmse_std) ? Number(r.rmse_std) : null,
+          r2: Number.isFinite(r.r2) ? Number(r.r2) : null,
+          r2Std: Number.isFinite(r.r2_std) ? Number(r.r2_std) : null,
+        });
+      }
+    }
+
+    for (const r of rows) {
+      r.flags = tuningFlags(r);
+      r.severity = severityFromFlags(r.flags);
+    }
+
+    if (summary) {
+      const bad = rows.filter((r) => r.severity === 'bad').length;
+      const warn = rows.filter((r) => r.severity === 'warn').length;
+      const ok = rows.filter((r) => r.severity === 'ok').length;
+      const group = rows.find((r) => r.cvGroup)?.cvGroup || '—';
+      const kUsed = rows.find((r) => Number.isFinite(r.k))?.k || '—';
+      summary.textContent = `Resumo de tuning. Total ${rows.length}. OK ${ok}. Alerta ${warn}. Crítico ${bad}. CV com k ${kUsed} e grupo ${group}.`;
+    }
+
+    table.innerHTML = '';
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th>Profundidade</th><th>Variável</th><th>Algo</th><th>n</th><th>k</th><th>Grupo</th><th>RMSE (CV)</th><th>R² (CV)</th><th>Status</th></tr>';
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    for (const r of rows) {
+      const tr = document.createElement('tr');
+      if (r.severity === 'bad') tr.classList.add('dash-tuning-bad');
+      if (r.severity === 'warn') tr.classList.add('dash-tuning-warn');
+
+      const rmseTxt = Number.isFinite(r.rmse)
+        ? `${formatNumberPtBR(r.rmse, 3)}${Number.isFinite(r.rmseStd) ? ` ± ${formatNumberPtBR(r.rmseStd, 3)}` : ''}`
+        : '—';
+      const r2Txt = Number.isFinite(r.r2)
+        ? `${formatNumberPtBR(r.r2, 3)}${Number.isFinite(r.r2Std) ? ` ± ${formatNumberPtBR(r.r2Std, 3)}` : ''}`
+        : '—';
+      const statusTxt = r.ok ? 'OK' : 'Falha';
+
+      tr.innerHTML = `
+        <td>${r.depthLabel}</td>
+        <td>${r.target}</td>
+        <td>${String(r.algo || '')}</td>
+        <td>${Number.isFinite(r.n) ? r.n : '—'}</td>
+        <td>${Number.isFinite(r.k) ? r.k : '—'}</td>
+        <td>${r.cvGroup || '—'}</td>
+        <td>${rmseTxt}</td>
+        <td>${r2Txt}</td>
         <td>${statusTxt}</td>
       `;
       tbody.appendChild(tr);
@@ -820,7 +1048,7 @@
         }
 
         const hint = document.createElement('p');
-  hint.className = 'lt-muted dash-driver-hint';
+          hint.className = 'lt-muted dash-driver-hint';
         hint.textContent = 'Sugestão prática: priorize intervenções nos fatores com maior |r| e que sejam manejáveis (interpretação operacional).';
 
         box.appendChild(ul);
@@ -874,6 +1102,8 @@
     }));
 
     const modelQuality = renderModelQualityTable();
+    const modelQualityAlerts = renderModelQualityAlertsPanel();
+    const tuningBest = renderTuningBestTable();
 
     // Estado compartilhado (para exportações)
     const state = {
@@ -889,6 +1119,8 @@
       driversByDepth,
       recommendations: recs,
       modelQuality,
+      modelQualityAlerts,
+      tuningBest,
     };
     window.ICSDashboardState = state;
 

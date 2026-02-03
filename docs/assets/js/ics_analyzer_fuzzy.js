@@ -321,6 +321,12 @@
   };
 
   function getReducedMLModels() {
+    if (typeof ISPC_ReducedMLModelsProduction !== 'undefined' && ISPC_ReducedMLModelsProduction) {
+      return ISPC_ReducedMLModelsProduction;
+    }
+    if (typeof window !== 'undefined' && window.ISPC_ReducedMLModelsProduction) {
+      return window.ISPC_ReducedMLModelsProduction;
+    }
     if (typeof ISPC_ReducedMLModels !== 'undefined' && ISPC_ReducedMLModels) {
       return ISPC_ReducedMLModels;
     }
@@ -328,6 +334,13 @@
       return window.ISPC_ReducedMLModels;
     }
     if (typeof require === 'function') {
+      try {
+        // eslint-disable-next-line global-require, import/no-dynamic-require
+        const prod = require('./ispc_reduced_ml_models_production.js');
+        if (prod) return prod;
+      } catch (err) {
+        // ignore
+      }
       try {
         // Node: mesmo diretório do fuzzy.js
         // eslint-disable-next-line global-require, import/no-dynamic-require
