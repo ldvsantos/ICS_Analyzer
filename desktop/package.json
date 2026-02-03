@@ -1,6 +1,6 @@
 {
   "name": "ics-analyzer-desktop",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "ICS Analyzer - Aplicativo desktop (Windows) empacotado com Electron",
   "main": "main.js",
   "author": "ICS Analyzer Team",
@@ -33,6 +33,10 @@
     ],
     "extraResources": [
       {
+        "from": "build/icon.ico",
+        "to": "icon.ico"
+      },
+      {
         "from": "../docs",
         "to": "docs"
       }
@@ -47,7 +51,9 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
     }
   }
 }

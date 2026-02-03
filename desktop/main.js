@@ -7,7 +7,9 @@ const docsPath = app.isPackaged
   ? path.join(process.resourcesPath, 'docs')
   : path.join(__dirname, '..', 'docs');
 
-const appIconPath = path.join(__dirname, 'build', 'icon.ico');
+const appIconPath = app.isPackaged
+  ? path.join(process.resourcesPath, 'icon.ico')
+  : path.join(__dirname, 'build', 'icon.ico');
 
 function docsFilePath(fileName) {
   return path.join(docsPath, fileName);
