@@ -53,6 +53,17 @@ jobs:
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add data/ispc docs/assets/js
             git commit -m "chore: refresh ISPC artifacts"
+            
+            # Pull com rebase antes de push para evitar conflitos
+            git pull --rebase origin main || {
+              echo "Conflito ao fazer rebase. Abortando e tentando push direto."
+              git rebase --abort
+              git push || {
+                echo "Push falhou. Provavelmente há commits novos no remoto."
+                echo "O workflow será reexecutado automaticamente na próxima vez."
+                exit 1
+              }
+            }
             git push
           else
             echo "No changes to commit"
