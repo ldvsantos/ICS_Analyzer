@@ -1,0 +1,38 @@
+{
+  "tag": "dados_010",
+  "nTotal": 108,
+  "nUsed": 76,
+  "meanDelta": 0.1247900810420326,
+  "mae": 0.3334522566664426,
+  "rmse": 0.6310775446875951,
+  "maxAbsDelta": 2.5047039828594286,
+  "classAgreementPct": 80.26315789473684,
+  "confusion": [
+    [
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      54,
+      13
+    ],
+    [
+      0,
+      2,
+      7
+    ]
+  ],
+  "notes": {
+    "reducedInputsCount": 10,
+    "estimatedInputs": [
+      "dmp",
+      "rmp",
+      "densidade",
+      "n_espigas_com",
+      "peso_espigas"
+    ],
+    "calibration": "variaveis estimadas por ML (ridge) e inferencia fuzzy subsequente"
+  }
+}

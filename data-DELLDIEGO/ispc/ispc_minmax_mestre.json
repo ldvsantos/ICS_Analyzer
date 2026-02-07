@@ -1,0 +1,77 @@
+{
+  "dmg": {
+    "min": NaN,
+    "max": NaN,
+    "count": 0
+  },
+  "dmp": {
+    "min": NaN,
+    "max": NaN,
+    "count": 0
+  },
+  "rmp": {
+    "min": NaN,
+    "max": NaN,
+    "count": 0
+  },
+  "densidade": {
+    "min": NaN,
+    "max": NaN,
+    "count": 0
+  },
+  "estoque_c": {
+    "min": NaN,
+    "max": NaN,
+    "count": 0
+  },
+  "na": {
+    "min": NaN,
+    "max": NaN,
+    "count": 0
+  },
+  "icv": {
+    "min": NaN,
+    "max": NaN,
+    "count": 0
+  },
+  "altura": {
+    "min": NaN,
+    "max": NaN,
+    "count": 0
+  },
+  "diam_espiga": {
+    "min": NaN,
+    "max": NaN,
+    "count": 0
+  },
+  "comp_espiga": {
+    "min": NaN,
+    "max": NaN,
+    "count": 0
+  },
+  "n_plantas": {
+    "min": NaN,
+    "max": NaN,
+    "count": 0
+  },
+  "n_espigas": {
+    "min": NaN,
+    "max": NaN,
+    "count": 0
+  },
+  "n_espigas_com": {
+    "min": NaN,
+    "max": NaN,
+    "count": 0
+  },
+  "peso_espigas": {
+    "min": NaN,
+    "max": NaN,
+    "count": 0
+  },
+  "produtividade": {
+    "min": NaN,
+    "max": NaN,
+    "count": 0
+  }
+}
