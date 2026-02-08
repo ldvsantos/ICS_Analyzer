@@ -1,6 +1,6 @@
 {
   "name": "ics-analyzer-desktop",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "ICS Analyzer - Aplicativo desktop (Windows) empacotado com Electron",
   "main": "main.js",
   "author": "ICS Analyzer Team",
@@ -30,6 +30,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "splash.html",
       "package.json",
       "build/**"
     ],

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:">
+  <title>ICS Analyzer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.5; }
+    }
+
+    @keyframes progressBar {
+      0%   { width: 0%; }
+      10%  { width: 10%; }
+      25%  { width: 25%; }
+      45%  { width: 48%; }
+      65%  { width: 68%; }
+      80%  { width: 82%; }
+      100% { width: 100%; }
+    }
+
+    @keyframes shimmer {
+      0%   { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    @keyframes iconGlow {
+      0%, 100% { filter: drop-shadow(0 0 6px rgba(34, 139, 34, 0.3)); }
+      50%      { filter: drop-shadow(0 0 18px rgba(34, 139, 34, 0.6)); }
+    }
+
+    @keyframes dotPulse {
+      0%, 80%, 100% { opacity: 0; transform: scale(0.5); }
+      40%           { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes soilLayer1 {
+      0%, 100% { opacity: 0.15; }
+      50%      { opacity: 0.25; }
+    }
+
+    @keyframes soilLayer2 {
+      0%, 100% { opacity: 0.10; }
+      50%      { opacity: 0.20; }
+    }
+
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(155deg, #1a2f1a 0%, #2d4a2d 35%, #1a3328 70%, #0f1f14 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-app-region: drag;
+      user-select: none;
+      position: relative;
+    }
+
+    /* Decorative soil layers at bottom */
+    .soil-layers {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 80px;
+      pointer-events: none;
+    }
+
+    .soil-layer {
+      position: absolute;
+      left: 0;
+      right: 0;
+      border-radius: 8px 8px 0 0;
+    }
+
+    .soil-layer-1 {
+      bottom: 0;
+      height: 35px;
+      background: linear-gradient(90deg, #5c3d2e, #7a5240, #5c3d2e);
+      opacity: 0.2;
+      animation: soilLayer1 4s ease-in-out infinite;
+    }
+
+    .soil-layer-2 {
+      bottom: 30px;
+      height: 25px;
+      background: linear-gradient(90deg, #8b6f47, #a0845c, #8b6f47);
+      opacity: 0.12;
+      animation: soilLayer2 5s ease-in-out infinite;
+    }
+
+    .soil-layer-3 {
+      bottom: 50px;
+      height: 20px;
+      background: linear-gradient(90deg, #6b8f4e, #7da05c, #6b8f4e);
+      opacity: 0.08;
+    }
+
+    .splash-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      animation: fadeIn 0.9s ease-out;
+      z-index: 1;
+    }
+
+    /* Icon / Logo area */
+    .splash-icon {
+      width: 88px;
+      height: 88px;
+      margin-bottom: 20px;
+      animation: iconGlow 2.8s ease-in-out infinite;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .splash-icon svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 6px 24px rgba(34, 139, 34, 0.3));
+    }
+
+    /* Title */
+    .splash-title {
+      font-size: 30px;
+      font-weight: 700;
+      color: #e8f5e9;
+      letter-spacing: 1.5px;
+      margin-bottom: 4px;
+    }
+
+    .splash-title .accent {
+      color: #66bb6a;
+    }
+
+    /* Subtitle */
+    .splash-subtitle {
+      font-size: 11px;
+      color: #81c784;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      margin-bottom: 36px;
+      opacity: 0.85;
+    }
+
+    /* Progress bar */
+    .progress-wrapper {
+      width: 320px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #388e3c, #66bb6a, #388e3c);
+      background-size: 200% 100%;
+      animation: progressBar 3.5s ease-in-out forwards, shimmer 1.8s linear infinite;
+    }
+
+    /* Loading status */
+    .splash-status {
+      font-size: 11px;
+      color: #5a7a5a;
+      letter-spacing: 0.5px;
+      min-height: 16px;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .splash-status .dots {
+      display: inline-flex;
+      gap: 3px;
+      margin-left: 3px;
+    }
+
+    .splash-status .dots span {
+      width: 4px;
+      height: 4px;
+      background: #5a7a5a;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .splash-status .dots span:nth-child(1) { animation: dotPulse 1.4s 0s infinite; }
+    .splash-status .dots span:nth-child(2) { animation: dotPulse 1.4s 0.2s infinite; }
+    .splash-status .dots span:nth-child(3) { animation: dotPulse 1.4s 0.4s infinite; }
+
+    /* Footer */
+    .splash-footer {
+      position: fixed;
+      bottom: 16px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 10px;
+      color: #4a6a4a;
+      letter-spacing: 0.5px;
+      z-index: 2;
+    }
+
+    .splash-footer .version {
+      color: #66876a;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Decorative soil layers -->
+  <div class="soil-layers">
+    <div class="soil-layer soil-layer-3"></div>
+    <div class="soil-layer soil-layer-2"></div>
+    <div class="soil-layer soil-layer-1"></div>
+  </div>
+
+  <div class="splash-container">
+
+    <!-- SVG icon: magnifying glass + soil layers (analysis concept) -->
+    <div class="splash-icon">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Soil sample circle -->
+        <circle cx="42" cy="42" r="30" fill="#2e4a2e" stroke="#66bb6a" stroke-width="3"/>
+        <!-- Soil layers inside circle -->
+        <path d="M17 50 Q30 47, 42 50 Q54 53, 67 50 L67 58 Q54 55, 42 58 Q30 61, 17 58 Z" fill="#8b6f47" opacity="0.6"/>
+        <path d="M17 40 Q30 37, 42 40 Q54 43, 67 40 L67 50 Q54 47, 42 50 Q30 53, 17 50 Z" fill="#a0845c" opacity="0.5"/>
+        <path d="M20 32 Q32 29, 42 32 Q52 35, 64 32 L67 40 Q54 43, 42 40 Q30 37, 17 40 Z" fill="#6b8f4e" opacity="0.5"/>
+        <!-- Magnifying glass handle -->
+        <line x1="62" y1="62" x2="85" y2="85" stroke="#81c784" stroke-width="5" stroke-linecap="round"/>
+        <!-- Magnifying glass ring -->
+        <circle cx="42" cy="42" r="30" fill="none" stroke="#81c784" stroke-width="3.5"/>
+        <!-- Sparkle / analysis indicator -->
+        <circle cx="32" cy="28" r="3" fill="#a5d6a7" opacity="0.7"/>
+        <circle cx="50" cy="34" r="2" fill="#c8e6c9" opacity="0.5"/>
+      </svg>
+    </div>
+
+    <div class="splash-title"><span class="accent">ICS</span> Analyzer</div>
+    <div class="splash-subtitle">Análise de Cobertura do Solo</div>
+
+    <div class="progress-wrapper">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div class="splash-status">
+      <span id="statusText">Inicializando</span>
+      <span class="dots"><span></span><span></span><span></span></span>
+    </div>
+  </div>
+
+  <div class="splash-footer">
+    <span class="version" id="versionText">v1.0.12</span> &mdash; &copy; 2025-2026 ICS Analyzer &bull; UFS
+  </div>
+
+  <script>
+    const messages = [
+      'Inicializando módulos',
+      'Carregando recursos',
+      'Preparando análise de solo',
+      'Configurando interface',
+      'Quase pronto'
+    ];
+    const statusEl = document.getElementById('statusText');
+    let idx = 0;
+
+    const interval = setInterval(() => {
+      idx++;
+      if (idx < messages.length) {
+        statusEl.textContent = messages[idx];
+      }
+    }, 650);
+
+    // Listen for close signal from main process
+    if (window.icsDesktop && window.icsDesktop.onSplashClose) {
+      window.icsDesktop.onSplashClose(() => {
+        clearInterval(interval);
+        statusEl.textContent = 'Pronto!';
+      });
+    }
+  </script>
+</body>
+</html>

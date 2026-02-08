@@ -287,6 +287,35 @@ function buildMenu(mainWindow) {
   Menu.setApplicationMenu(menu);
 }
 
+function createSplashWindow() {
+  const splash = new BrowserWindow({
+    width: 480,
+    height: 380,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: true,
+    center: true,
+    alwaysOnTop: true,
+    skipTaskbar: false,
+    icon: appIconPath,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  splash.loadFile(path.join(__dirname, 'splash.html'));
+
+  splash.on('closed', () => {
+    splashWindow = null;
+  });
+
+  return splash;
+}
+
+let splashWindow = null;
+
 function createWindow() {
   const mainWindow = new BrowserWindow({
     width: 1360,
@@ -307,7 +336,15 @@ function createWindow() {
   });
 
   mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
+    // Wait for splash to be visible before switching
+    setTimeout(() => {
+      if (splashWindow) {
+        splashWindow.close();
+        splashWindow = null;
+      }
+      mainWindow.show();
+      mainWindow.focus();
+    }, 3500); // 3.5 seconds splash
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -477,11 +514,16 @@ function setupIpc(mainWindow) {
 }
 
 app.whenReady().then(() => {
+  // Show splash screen first
+  splashWindow = createSplashWindow();
+
+  // Create main window (hidden) and set up IPC
   const mainWindow = createWindow();
   setupIpc(mainWindow);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
+      splashWindow = createSplashWindow();
       const win = createWindow();
       setupIpc(win);
     }
